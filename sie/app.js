@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'wieder-fit-v1';
-  var APP_VERSION = 7;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 8;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -281,10 +281,10 @@
     try { if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); } catch (e) { }
     try {
       if (!audioCtx) return;
-      [0, 0.4, 0.8].forEach(function (off) {
+      [0, 0.35].forEach(function (off) {
         var o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + off;
-        o.type = 'square'; o.frequency.value = 1040;
-        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.01); g.gain.setValueAtTime(1, t + 0.26); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        o.type = 'sine'; o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.75, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
         o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.32);
       });
     } catch (e) { }

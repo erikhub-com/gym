@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'wieder-fit-v1';
-  var APP_VERSION = 6;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 7;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag

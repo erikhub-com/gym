@@ -199,10 +199,10 @@
   // Standard-Pause in Sekunden: eigene Vorgabe, sonst nach Gewicht (schwer = länger).
   function defaultRest(ex) {
     if (ex && ex.rest > 0) return Math.round(ex.rest);
-    if (!ex || !ex.weight) return 45;
-    if (ex.weight >= 40) return 150;
-    if (ex.weight >= 20) return 120;
-    return 75;
+    if (!ex || !ex.weight) return 30;
+    if (ex.weight >= 40) return 90;
+    if (ex.weight >= 20) return 70;
+    return 45;
   }
 
   // Wiedereinstieg: alle Plan-Gewichte um pct % senken (auf 0,5 kg gerundet). Gibt die alten Werte zurück (für Rückgängig).

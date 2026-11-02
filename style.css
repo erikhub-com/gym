@@ -34,6 +34,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);border-c
 label.f{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
 .wgt{max-width:120px}
 button.btn{background:var(--accent);color:#14290b;border:0;border-radius:14px;padding:13px 16px;font-size:16px;font-weight:700;width:100%;margin-top:10px}
+a.btn{display:block;text-align:center;text-decoration:none;border-radius:14px;padding:13px 16px;font-size:16px;font-weight:700;margin-top:10px;background:var(--accent);color:#14290b}
 button.btn.sec{background:var(--card2);color:var(--text);border:1px solid var(--line)}
 button.btn.dng{background:transparent;color:var(--danger);border:1px solid var(--danger)}
 button.small{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}

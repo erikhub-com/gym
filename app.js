@@ -174,7 +174,7 @@
       h += '<div class="card"><div class="row spread"><b>' + esc(d.emoji || '') + ' Tag ' + d.id + ' – ' + esc(d.name) + '</b><button class="small" data-addex="' + d.id + '">+ Übung</button></div>';
       d.exercises.forEach(function (e) {
         h += '<div class="list-item" data-editex="' + esc(e.id) + '" style="cursor:pointer"><span>' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') +
-          '<br><span class="muted">' + e.sets + ' × ' + e.repMin + '–' + e.repMax + ' · +' + L.fmtKg(e.step || 0).replace('KG', '0 kg') + '</span></span><b>' + L.fmtKg(e.weight) + '</b></div>';
+          '<br><span class="muted">' + e.sets + ' × ' + e.repMin + '–' + e.repMax + ' · +' + L.fmtKg(e.step || 0).replace('KG', '0 kg') + '</span></span><span class="row" style="flex-wrap:nowrap"><b>' + L.fmtKg(e.weight) + '</b><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></span></div>';
       });
       h += '</div>';
     });
@@ -234,6 +234,23 @@
     }
   }
 
+  // ---------- Dialog: Technik / Ausführung ----------
+  function openHow(exId) {
+    var e = findEx(exId); if (!e) return;
+    var text = (window.HOWTO && window.HOWTO[exId]) || '';
+    var steps = text ? text.split('|') : [];
+    var query = e.name.replace(/\s*\(.*?\)/g, '') + ' Ausführung';
+    var dlg = $('#dlg');
+    dlg.innerHTML = '<h3>' + esc(e.name) + '</h3>' +
+      (steps.length ? '<ol class="warm" style="font-size:15px;color:var(--text);padding-left:20px">' + steps.map(function (s) { return '<li style="margin:6px 0">' + esc(s) + '</li>'; }).join('') + '</ol>' :
+        '<p class="muted">Für diese Übung gibt es noch keine Kurzanleitung.</p>') +
+      (e.note ? '<p class="muted">💡 ' + esc(e.note) + '</p>' : '') +
+      '<a class="btn" href="https://www.youtube.com/results?search_query=' + encodeURIComponent(query) + '" target="_blank" rel="noopener">▶ Video auf YouTube suchen</a>' +
+      '<button class="btn sec" id="how-close">Schließen</button>';
+    dlg.showModal();
+    $('#how-close').onclick = function () { dlg.close(); };
+  }
+
   // ---------- Events ----------
   document.addEventListener('click', function (ev) {
     var t = ev.target;
@@ -264,6 +281,8 @@
     }
     var logCard = t.closest('[data-log]');
     if (logCard && tab === 'verlauf') { var lid = parseInt(logCard.dataset.log, 10); openLog = openLog === lid ? null : lid; render(); return; }
+    var how = t.closest('[data-how]');
+    if (how) return openHow(how.dataset.how);
     var editEx = t.closest('[data-editex]');
     if (editEx) return openExDialog(editEx.dataset.editex);
     var addEx = t.closest('[data-addex]');

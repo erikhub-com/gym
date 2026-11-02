@@ -1,6 +1,6 @@
 // Offline-Cache: erst Cache, sonst Netz. Bei Änderungen CACHE-Version erhöhen.
-const CACHE = 'dschungel-gym-v2';
-const FILES = ['./', './index.html', './style.css', './plan.js', './logic.js', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = 'dschungel-gym-v3';
+const FILES = ['./', './index.html', './style.css', './plan.js', './logic.js', './howto.js', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

@@ -1,5 +1,5 @@
 // Offline-Cache: erst Cache, sonst Netz. Bei Änderungen CACHE-Version erhöhen.
-const CACHE = 'dschungel-gym-v3';
+const CACHE = 'dschungel-gym-v4';
 const FILES = ['./', './index.html', './style.css', './plan.js', './logic.js', './howto.js', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

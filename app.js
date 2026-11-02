@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 6;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 7;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -99,8 +99,8 @@
       h += '<div class="card' + (e.pulley ? ' pulley' : '') + '" data-ex="' + esc(e.id) + '">' +
         '<div class="row spread"><h3>' + (idx + 1) + '. ' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') + '</h3><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></div>' +
         '<div class="goal">Ziel: <b>' + e.repMin + '–' + e.repMax + ' × ' + e.sets + '</b> bei <b>' + L.fmtKg(e.weight) + '</b>' +
-        (e.step ? ' <span class="muted">→ bei ' + e.repMax + '/' + e.repMax + '/' + e.repMax + ' ' + L.fmtKg(L.round(e.weight + e.step)) + '</span>' : '') + '</div>' +
-        '<div class="muted">' + esc(lastTxt) + '</div>' + (e.note ? '<div class="muted">💡 ' + esc(e.note) + '</div>' : '') +
+        (e.step ? ' <span class="muted">→ bei ' + e.repMax + '/' + e.repMax + '/' + e.repMax + ' ' + L.fmtKg(L.nextLadder(e.weight, e.step, e.equip, inv())) + '</span>' : '') + '</div>' +
+        loadLine(e, cur.weight) + '<div class="muted">' + esc(lastTxt) + '</div>' + (e.note ? '<div class="muted">💡 ' + esc(e.note) + '</div>' : '') +
         '<label class="f">Gewicht (kg)</label><input class="wgt" type="number" inputmode="decimal" step="0.25" data-w="' + esc(e.id) + '" value="' + esc(cur.weight) + '">' +
         '<div class="sets">' + cur.reps.map(function (r, i) {
           return '<input type="number" inputmode="decimal" step="0.5" placeholder="Satz ' + (i + 1) + '" data-r="' + esc(e.id) + '" data-i="' + i + '" value="' + esc(r) + '">';
@@ -180,6 +180,7 @@
       });
       h += '</div>';
     });
+    h += invCard();
     h += comebackCard();
     h += '<div class="card"><h3>Backup</h3><p class="muted">Sicherung aller Daten als Datei und zurückspielen.' + backupStatus() + '</p>' +
       '<button class="btn sec" id="export">⬇️ Daten exportieren</button>' +
@@ -203,6 +204,7 @@
       '<div><label class="f">Sätze</label><input id="f-sets" type="number" inputmode="numeric" value="' + esc(e.sets) + '"></div></div>' +
       '<label class="f">Pause (Sekunden, leer = automatisch)</label><input id="f-rest" type="number" inputmode="numeric" value="' + esc(e.rest || '') + '">' +
       '<label class="f">Notiz</label><input id="f-note" type="text" value="' + esc(e.note) + '" style="text-align:left">' +
+      '<label class="f">Gerät (für die Beladung)</label><select id="f-equip">' + EQUIP_OPTS.map(function (o) { return '<option value="' + o[0] + '"' + ((e.equip || 'free') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
       '<label class="row" style="margin-top:10px"><input id="f-pulley" type="checkbox" style="width:auto"' + (e.pulley ? ' checked' : '') + '> Pulley-Übung</label>' +
       '<button class="btn" id="f-save">Speichern</button>' +
       (isNew ? '' : '<div class="grid3"><button class="btn sec" id="f-up">↑</button><button class="btn sec" id="f-down">↓</button><button class="btn dng" id="f-del">Löschen</button></div>') +
@@ -214,7 +216,7 @@
       var name = $('#f-name').value.trim();
       if (!name) { toast('Bitte einen Namen eingeben'); return; }
       var rmin = Math.max(1, Math.round(num('#f-min', 8))), rmax = Math.max(rmin, Math.round(num('#f-max', 10)));
-      var vals = { name: name, weight: Math.max(0, num('#f-weight', 0)), step: Math.max(0, num('#f-step', 0)), repMin: rmin, repMax: rmax, sets: Math.min(8, Math.max(1, Math.round(num('#f-sets', 3)))), note: $('#f-note').value.trim(), pulley: $('#f-pulley').checked, rest: Math.max(0, Math.round(num('#f-rest', 0))) };
+      var vals = { name: name, weight: Math.max(0, num('#f-weight', 0)), step: Math.max(0, num('#f-step', 0)), repMin: rmin, repMax: rmax, sets: Math.min(8, Math.max(1, Math.round(num('#f-sets', 3)))), note: $('#f-note').value.trim(), pulley: $('#f-pulley').checked, rest: Math.max(0, Math.round(num('#f-rest', 0))), equip: $('#f-equip').value };
       if (isNew) {
         var d = dayById(dayId);
         vals.id = 'ex-' + Date.now().toString(36);
@@ -373,7 +375,7 @@
   function comeback() {
     var pct = parseInt($('#cb-pct').value, 10);
     if (!confirm('Alle Gewichte im Plan um ' + pct + ' % reduzieren? Laufende Eingaben im Tab „Heute" werden geleert. Du kannst es rückgängig machen.')) return;
-    var res = L.reduceWeight(state.plan, pct);
+    var res = L.reduceWeight(state.plan, pct, inv());
     if (!res.changed) { toast('Nichts zu reduzieren'); return; }
     state.weightBackup = { date: L.isoToday(), pct: pct, weights: res.before };
     state.draft = null; selDay = null; save(); render();
@@ -385,6 +387,84 @@
     L.restoreWeights(state.plan, state.weightBackup.weights);
     state.weightBackup = null; state.draft = null; selDay = null; save(); render();
     toast('Gewichte wiederhergestellt');
+  }
+
+  // ---------- Scheiben, Stangen, Beladung ----------
+  var snapChanges = null;
+  function inv() { return state.settings.inv || undefined; }
+  function fmtN(n) { return String(n).replace('.', ','); }
+  var EQUIP_OPTS = [['free', 'Frei / Maschine / Körpergewicht (nicht angepasst)'], ['bar', 'Langhantel (symmetrisch geladen)'], ['db2', 'Zwei Kurzhanteln (Gewicht je Hand)'], ['db1', 'Eine Kurzhantel (Gewicht je Hand)'], ['plates', 'Lose Scheiben / Pulley-Stift']];
+
+  function migrate() {
+    var defs = {};
+    window.DEFAULT_PLAN.days.forEach(function (d) { d.exercises.forEach(function (e) { defs[e.id] = e.equip; }); });
+    state.plan.days.forEach(function (d) { d.exercises.forEach(function (e) { if (!e.equip) e.equip = defs[e.id] || 'free'; if (e.note && /^bei [\d\/]+ → /.test(e.note)) e.note = ''; }); });
+    if (!state.settings.snapped) {
+      var ch = L.snapPlan(state.plan, inv());
+      state.settings.snapped = true;
+      if (ch.length) { state.draft = null; selDay = null; snapChanges = ch; }
+    }
+    save();
+  }
+  function showSnapSummary(ch, title) {
+    var dlg = $('#dlg');
+    dlg.innerHTML = '<h3>' + esc(title) + '</h3><p class="muted">Diese Gewichte sind jetzt mit deinen Scheiben symmetrisch ladbar:</p>' +
+      ch.map(function (c) { return '<div class="list-item"><span>' + esc(c.name) + '</span><span>' + L.fmtKg(c.from) + ' → <b>' + L.fmtKg(c.to) + '</b></span></div>'; }).join('') +
+      '<button class="btn" id="snap-close">OK</button>';
+    dlg.showModal();
+    $('#snap-close').onclick = function () { dlg.close(); };
+  }
+  function snapAll() {
+    if (!confirm('Alle Plan-Gewichte auf das nächste mit deinen Scheiben ladbare Gewicht legen? Laufende Eingaben im Tab „Heute" werden geleert.')) return;
+    var ch = L.snapPlan(state.plan, inv());
+    if (!ch.length) { toast('Alle Gewichte sind bereits ladbar'); return; }
+    state.draft = null; selDay = null; save(); render();
+    showSnapSummary(ch, 'Gewichte angepasst');
+  }
+  function loadText(e, w) {
+    w = parseFloat(w);
+    if (!e || !e.equip || e.equip === 'free' || !(w > 0)) return '';
+    var t = L.loadout(e.equip, w, inv());
+    if (t) return '🔩 ' + t;
+    return '⚠️ So nicht ladbar – nächstes: ' + L.fmtKg(L.snapWeight(w, e.equip, inv(), 'nearest'));
+  }
+  function loadLine(e, w) {
+    if (!e.equip || e.equip === 'free') return '';
+    return '<div class="muted" data-ld="' + esc(e.id) + '">' + esc(loadText(e, w)) + '</div>';
+  }
+  function updLoad(exId) {
+    var el = document.querySelector('[data-ld="' + exId + '"]'), e = findEx(exId);
+    if (el && e && state.draft && state.draft.ex[exId]) el.textContent = loadText(e, state.draft.ex[exId].weight);
+  }
+  function invCard() {
+    var iv = inv() || L.DEFAULT_INV;
+    var plates = L.SIZES.filter(function (s) { return iv.plates[s] > 0; }).map(function (s) { return iv.plates[s] + '× ' + fmtN(s); }).join(', ') || 'keine';
+    var lines = [['Langhantel (gesamt)', 'bar'], ['Zwei Kurzhanteln (je Hand)', 'db2'], ['Eine Kurzhantel (je Hand)', 'db1'], ['Lose Scheiben / Pulley', 'plates']].map(function (p) {
+      return '<p class="ladder"><b>' + p[0] + ':</b> ' + (L.ladderWeights(p[1], inv()).map(fmtN).join(' · ') || '–') + ' kg</p>';
+    }).join('');
+    return '<div class="card"><h3>Scheiben &amp; Stangen</h3><p class="muted">Langstange ' + fmtN(iv.longBar) + ' kg · Kurzstange ' + fmtN(iv.shortBar) + ' kg<br>Scheiben: ' + esc(plates) + '</p>' +
+      '<p class="muted">Beladen wird symmetrisch. Steigerungen springen automatisch zum nächsten ladbaren Gewicht.</p>' +
+      '<details><summary class="muted">Mögliche Gewichte anzeigen</summary>' + lines + '</details>' +
+      '<button class="btn sec" id="inv-edit">⚙️ Bestand bearbeiten</button>' +
+      '<button class="btn sec" id="inv-snap">🔩 Alle Gewichte an Bestand anpassen</button></div>';
+  }
+  function openInvDialog() {
+    var iv = inv() || L.DEFAULT_INV, dlg = $('#dlg');
+    dlg.innerHTML = '<h3>Scheiben &amp; Stangen</h3><p class="muted">Anzahl einzeln zählen (2 Stück = 1 Paar). Symmetrisch geladen wird mit Paaren.</p>' +
+      '<div class="grid2"><div><label class="f">Langstange (kg)</label><input id="inv-long" type="number" inputmode="decimal" step="0.25" value="' + esc(iv.longBar) + '"></div>' +
+      '<div><label class="f">Kurzstange (kg)</label><input id="inv-short" type="number" inputmode="decimal" step="0.25" value="' + esc(iv.shortBar) + '"></div></div>' +
+      '<div class="grid3">' + L.SIZES.map(function (s) { return '<div><label class="f">' + fmtN(s) + ' kg</label><input type="number" inputmode="numeric" min="0" data-invp="' + s + '" value="' + esc(iv.plates[s] || 0) + '"></div>'; }).join('') + '</div>' +
+      '<button class="btn" id="inv-save">Speichern</button><button class="btn sec" id="inv-cancel">Abbrechen</button>';
+    dlg.showModal();
+    $('#inv-cancel').onclick = function () { dlg.close(); };
+    $('#inv-save').onclick = function () {
+      function n(id, def) { var v = parseFloat($(id).value.replace(',', '.')); return isNaN(v) || v < 0 ? def : v; }
+      var plates = {};
+      document.querySelectorAll('[data-invp]').forEach(function (i) { var v = parseInt(i.value, 10); plates[i.dataset.invp] = isNaN(v) || v < 0 ? 0 : Math.min(v, 40); });
+      state.settings.inv = { longBar: n('#inv-long', 10), shortBar: n('#inv-short', 2.5), plates: plates };
+      state.draft = null; save(); dlg.close(); render();
+      toast('Bestand gespeichert – mit „Alle Gewichte anpassen" übernimmst du ihn in den Plan', 5000);
+    };
   }
 
   // ---------- Events ----------
@@ -406,6 +486,8 @@
     if (t.id === 'bk-now') { doExport(); render(); toast('Backup gespeichert (Ordner Downloads)'); return; }
     var rb = t.closest('[data-rest]');
     if (rb) return restAdjust(rb.dataset.rest);
+    if (t.id === 'inv-edit') return openInvDialog();
+    if (t.id === 'inv-snap') return snapAll();
     if (t.id === 'comeback') return comeback();
     if (t.id === 'comeback-undo') return comebackUndo();
     if (t.id === 'goto-plan') { tab = 'plan'; render(); window.scrollTo(0, 0); return; }
@@ -434,7 +516,7 @@
     if (t.id === 'import') { $('#file').click(); return; }
     if (t.id === 'reset') {
       if (confirm('Plan auf den Standard zurücksetzen? Verlauf bleibt erhalten, eigene Gewichte im Plan gehen verloren.')) {
-        state.plan = clone(window.DEFAULT_PLAN); state.planVersion = window.DEFAULT_PLAN.version; state.draft = null; selDay = null; save(); render();
+        state.plan = clone(window.DEFAULT_PLAN); L.snapPlan(state.plan, inv()); state.planVersion = window.DEFAULT_PLAN.version; state.draft = null; selDay = null; save(); render();
       }
     }
   });
@@ -445,7 +527,7 @@
     if (t.dataset.r !== undefined) {
       state.draft.ex[t.dataset.r].reps[parseInt(t.dataset.i, 10)] = t.value.replace(',', '.'); save();
     } else if (t.dataset.w !== undefined) {
-      state.draft.ex[t.dataset.w].weight = t.value.replace(',', '.'); save();
+      state.draft.ex[t.dataset.w].weight = t.value.replace(',', '.'); save(); updLoad(t.dataset.w);
     } else if (t.dataset.meta) {
       state.draft[t.dataset.meta] = t.value; save();
     }
@@ -478,7 +560,7 @@
     var log = { id: Date.now(), date: d.date, dayId: d.dayId, exercises: entries, duration: dur, kcal: d.kcal, note: d.note };
     // Fortschritt nur für Übungen mit eingetragenen Sätzen
     var trained = { exercises: day.exercises.filter(function (e) { return entries[e.id] && entries[e.id].reps.some(function (r) { return r !== ''; }); }) };
-    var changes = L.applyProgression(trained, entries);
+    var changes = L.applyProgression(trained, entries, inv());
     state.logs.push(log);
     state.lastDayId = d.dayId;
     state.draft = null;
@@ -524,5 +606,7 @@
   try {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(function (p) { persisted = p; });
   } catch (e) { }
+  migrate();
   render();
+  if (snapChanges) showSnapSummary(snapChanges, 'Gewichte an deine Scheiben angepasst');
 })();

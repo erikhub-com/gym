@@ -64,6 +64,9 @@
       }
     ]
   };
+  // Gerät je Übung für die Beladung: bar = Langhantel, db2 = zwei Kurzhanteln, db1 = eine Kurzhantel, plates = lose Scheiben/Pulley, free = keine Anpassung
+  var EQUIP = {'barbell-row': 'bar', 'one-arm-row': 'db1', 'reverse-fly': 'db2', 'preacher': 'bar', 'rdl': 'bar', 'db-squat': 'db1', 'bulgarian': 'db2', 'glute-bridge': 'bar', 'hip-ext-kabel': 'plates', 'bankdruecken': 'bar', 'schulterdruecken': 'db2', 'incline-db': 'db2', 'seitheben': 'db2'};
+  DEFAULT_PLAN.days.forEach(function (d) { d.exercises.forEach(function (e) { e.equip = EQUIP[e.id] || 'free'; }); });
   root.DEFAULT_PLAN = DEFAULT_PLAN;
   if (typeof module !== 'undefined') module.exports = DEFAULT_PLAN;
 })(typeof self !== 'undefined' ? self : globalThis);

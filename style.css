@@ -1,0 +1,52 @@
+:root{
+  --bg:#0b2a1d; --bg2:#0f3d2a; --card:#14503a; --card2:#186047; --line:#2c7a5c;
+  --text:#eaf7ee; --muted:#9fcfb3; --accent:#b6e04a; --accent2:#f2c14e; --danger:#ef7b6b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{min-height:100vh;background:
+  radial-gradient(900px 400px at 100% -10%,rgba(182,224,74,.10),transparent 60%),
+  radial-gradient(700px 400px at -10% 110%,rgba(46,160,110,.18),transparent 60%),var(--bg);
+  padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+.top{position:sticky;top:0;z-index:5;background:rgba(11,42,29,.92);backdrop-filter:blur(8px);
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.brand{font-weight:700;font-size:18px;color:var(--accent)}
+.sub{color:var(--muted);font-size:13px}
+main{padding:12px 14px;max-width:640px;margin:0 auto}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--bg2);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:6}
+.tabs button{flex:1;background:none;border:0;color:var(--muted);padding:14px 4px;font-size:14px;font-weight:600}
+.tabs button.on{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+h2{margin:6px 0 10px;font-size:20px}
+h3{margin:0;font-size:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}
+.card.pulley{border-left:4px solid var(--accent2)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{justify-content:space-between}
+.muted{color:var(--muted);font-size:13px}
+.badge{display:inline-block;background:var(--accent2);color:#2b2100;border-radius:999px;font-size:11px;font-weight:700;padding:2px 8px;margin-left:6px;vertical-align:middle}
+.goal{margin:6px 0 8px;font-size:14px}
+.goal b{color:var(--accent)}
+.up{color:var(--accent);font-weight:700}
+.sets{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:8px;margin-top:8px}
+input,select,textarea{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px 10px;font-size:16px;text-align:center}
+textarea{text-align:left}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+label.f{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+.wgt{max-width:120px}
+button.btn{background:var(--accent);color:#14290b;border:0;border-radius:14px;padding:13px 16px;font-size:16px;font-weight:700;width:100%;margin-top:10px}
+button.btn.sec{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+button.btn.dng{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+button.small{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
+.daypick{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px}
+.daypick button{flex:0 0 auto;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:8px 12px;font-size:14px}
+.daypick button.on{background:var(--accent);color:#14290b;border-color:var(--accent);font-weight:700}
+.warm{font-size:14px;color:var(--muted);margin:4px 0 0;padding-left:18px}
+.toast{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));background:var(--accent);color:#14290b;border-radius:14px;padding:12px 14px;font-weight:600;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+dialog{background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:18px;padding:16px;width:min(92vw,520px);max-height:88vh;overflow:auto}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.chart{width:100%;height:auto;background:var(--bg);border-radius:12px;border:1px solid var(--line)}
+.list-item{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.list-item:last-child{border-bottom:0}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}

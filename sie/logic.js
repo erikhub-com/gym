@@ -74,7 +74,7 @@
 
   // ---------- Beladung: welche Gewichte sind mit dem Bestand symmetrisch ladbar? ----------
   var SIZES = ['20', '15', '10', '5', '2.5', '2', '1.25', '1', '0.5'];
-  var DEFAULT_INV = { longBar: 10, shortBar: 2.5, plates: { '20': 0, '15': 2, '10': 2, '5': 4, '2.5': 2, '2': 2, '1.25': 2, '1': 0, '0.5': 2 } };
+  var DEFAULT_INV = { longBar: 10, shortBar: 2.5, plates: { '20': 0, '15': 2, '10': 2, '5': 6, '2.5': 6, '2': 2, '1.25': 6, '1': 0, '0.5': 4 } };
   function h100(x) { return Math.round(x * 100); }
   function invOf(inv) { return inv && inv.plates ? inv : DEFAULT_INV; }
   var ladderCache = {};

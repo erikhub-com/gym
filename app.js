@@ -2,6 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
+  var APP_VERSION = 5;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -71,7 +72,7 @@
     else if (tab === 'fortschritt') v.innerHTML = viewFortschritt();
     else v.innerHTML = viewPlan();
     var n = state.logs.length;
-    $('#sub').textContent = n + (n === 1 ? ' Training' : ' Trainings') + ' gespeichert';
+    $('#sub').textContent = n + (n === 1 ? ' Training' : ' Trainings') + ' gespeichert · v' + APP_VERSION;
   }
 
   function viewHeute() {
@@ -361,6 +362,13 @@
     r.readAsText(file);
   }
 
-  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () { }); }
+  if ('serviceWorker' in navigator) {
+    // Neue Version übernimmt automatisch: Seite einmal neu laden (Eingaben liegen im Entwurf und bleiben erhalten)
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (hadController) location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').catch(function () { });
+  }
   render();
 })();

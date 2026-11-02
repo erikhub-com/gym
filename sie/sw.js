@@ -1,6 +1,6 @@
 // Offline-Cache: mit Internet immer zuerst die neueste Datei holen, ohne Netz (oder bei sehr langsamem Netz) aus dem Cache.
 // Bei Änderungen CACHE-Version erhöhen.
-const CACHE = 'wieder-fit-v4';
+const CACHE = 'wieder-fit-v5';
 const FILES = ['./', './index.html', './style.css', './plan.js', './logic.js', './howto.js', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const NET_TIMEOUT_MS = 3000;
 

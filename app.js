@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 8;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 9;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -95,12 +95,12 @@
       var last = L.lastEntry(state.logs, e.id);
       var cur = draft.ex[e.id] || (draft.ex[e.id] = { weight: e.weight, reps: [] });
       while (cur.reps.length < e.sets) cur.reps.push('');
-      var lastTxt = last ? ('Zuletzt (' + fmtDate(last.date) + '): ' + L.fmtKg(last.weight) + ' → ' + L.fmtReps(last.reps)) : 'Noch nicht trainiert';
+      var lastTxt = last ? (lastLabel(last.date) + ': ' + L.fmtReps(last.reps) + (last.weight ? ' @ ' + L.fmtKg(last.weight) : '')) : 'Noch keine Einträge';
       h += '<div class="card' + (e.pulley ? ' pulley' : '') + '" data-ex="' + esc(e.id) + '">' +
         '<div class="row spread"><h3>' + (idx + 1) + '. ' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') + '</h3><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></div>' +
         '<div class="goal">Ziel: <b>' + e.repMin + '–' + e.repMax + ' × ' + e.sets + '</b> bei <b>' + L.fmtKg(e.weight) + '</b>' +
         (e.step ? ' <span class="muted">→ bei ' + e.repMax + '/' + e.repMax + '/' + e.repMax + ' ' + L.fmtKg(L.nextLadder(e.weight, e.step, e.equip, inv())) + '</span>' : '') + '</div>' +
-        loadLine(e, cur.weight) + '<div class="muted">' + esc(lastTxt) + '</div>' + (e.note ? '<div class="muted">💡 ' + esc(e.note) + '</div>' : '') +
+        loadLine(e, cur.weight) + '<div class="last">↩ ' + esc(lastTxt) + '</div>' + (e.note ? '<div class="muted">💡 ' + esc(e.note) + '</div>' : '') +
         '<label class="f">Gewicht (kg)</label><input class="wgt" type="number" inputmode="decimal" step="0.25" data-w="' + esc(e.id) + '" value="' + esc(cur.weight) + '">' +
         '<div class="sets">' + cur.reps.map(function (r, i) {
           return '<input type="number" inputmode="decimal" step="0.5" placeholder="Satz ' + (i + 1) + '" data-r="' + esc(e.id) + '" data-i="' + i + '" value="' + esc(r) + '">';
@@ -176,7 +176,7 @@
       h += '<div class="card"><div class="row spread"><b>' + esc(d.emoji || '') + ' Tag ' + d.id + ' – ' + esc(d.name) + '</b><button class="small" data-addex="' + d.id + '">+ Übung</button></div>';
       d.exercises.forEach(function (e) {
         h += '<div class="list-item" data-editex="' + esc(e.id) + '" style="cursor:pointer"><span>' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') +
-          '<br><span class="muted">' + e.sets + ' × ' + e.repMin + '–' + e.repMax + ' · +' + L.fmtKg(e.step || 0).replace('KG', '0 kg') + '</span></span><span class="row" style="flex-wrap:nowrap"><b>' + L.fmtKg(e.weight) + '</b><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></span></div>';
+          '<br><span class="muted">' + e.sets + ' × ' + e.repMin + '–' + e.repMax + ' · +' + L.fmtKg(e.step || 0).replace('KG', '0 kg') + planLast(e) + '</span></span><span class="row" style="flex-wrap:nowrap"><b>' + L.fmtKg(e.weight) + '</b><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></span></div>';
       });
       h += '</div>';
     });
@@ -387,6 +387,17 @@
     L.restoreWeights(state.plan, state.weightBackup.weights);
     state.weightBackup = null; state.draft = null; selDay = null; save(); render();
     toast('Gewichte wiederhergestellt');
+  }
+
+  // ---------- Erinnerung: Einträge vom letzten Mal ----------
+  function lastLabel(iso) {
+    var n = daysSince(iso), p = iso.split('-'), short = p[2] + '.' + p[1] + '.';
+    if (n <= 10) return 'Letzte Woche (' + short + ')';
+    return 'Zuletzt vor ' + Math.round(n / 7) + ' Wochen (' + short + ')';
+  }
+  function planLast(e) {
+    var last = L.lastEntry(state.logs, e.id);
+    return last ? ' · ↩ ' + L.fmtReps(last.reps) : '';
   }
 
   // ---------- Scheiben, Stangen, Beladung ----------

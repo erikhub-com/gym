@@ -72,7 +72,38 @@
     return d.getFullYear() + '-' + m + '-' + day;
   }
 
-  var api = { nextWeight: nextWeight, suggestDay: suggestDay, fmtReps: fmtReps, fmtKg: fmtKg, lastEntry: lastEntry, series: series, applyProgression: applyProgression, isoToday: isoToday, round: round };
+  // Standard-Pause in Sekunden: eigene Vorgabe, sonst nach Gewicht (schwer = länger).
+  function defaultRest(ex) {
+    if (ex && ex.rest > 0) return Math.round(ex.rest);
+    if (!ex || !ex.weight) return 45;
+    if (ex.weight >= 40) return 150;
+    if (ex.weight >= 20) return 120;
+    return 75;
+  }
+
+  // Wiedereinstieg: alle Plan-Gewichte um pct % senken (auf 0,5 kg gerundet). Gibt die alten Werte zurück (für Rückgängig).
+  function reduceWeight(plan, pct) {
+    var f = 1 - pct / 100, before = {}, n = 0;
+    plan.days.forEach(function (d) {
+      d.exercises.forEach(function (ex) {
+        if (!ex.weight || ex.weight <= 0) return;
+        var nw = Math.min(ex.weight, Math.max(0.5, Math.round(ex.weight * f * 2) / 2));
+        if (nw !== ex.weight) { before[ex.id] = ex.weight; ex.weight = nw; n++; }
+      });
+    });
+    return { changed: n, before: before };
+  }
+  function restoreWeights(plan, before) {
+    var n = 0;
+    plan.days.forEach(function (d) {
+      d.exercises.forEach(function (ex) {
+        if (before && before[ex.id] !== undefined) { ex.weight = before[ex.id]; n++; }
+      });
+    });
+    return n;
+  }
+
+  var api = { defaultRest: defaultRest, reduceWeight: reduceWeight, restoreWeights: restoreWeights, nextWeight: nextWeight, suggestDay: suggestDay, fmtReps: fmtReps, fmtKg: fmtKg, lastEntry: lastEntry, series: series, applyProgression: applyProgression, isoToday: isoToday, round: round };
   root.TrainLogic = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);

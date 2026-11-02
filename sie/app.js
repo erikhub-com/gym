@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'wieder-fit-v1';
-  var APP_VERSION = 1;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 2;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -19,7 +19,7 @@
       if (raw) {
         var s = JSON.parse(raw);
         if (s && s.plan && s.plan.days) {
-          s.logs = s.logs || [];
+          s.logs = s.logs || []; s.settings = s.settings || {};
           // Neuer Standardplan nur übernehmen, solange noch nichts gespeichert wurde
           if ((s.planVersion || 1) < window.DEFAULT_PLAN.version && s.logs.length === 0) {
             s.plan = clone(window.DEFAULT_PLAN); s.draft = null; s.lastDayId = null;
@@ -29,7 +29,7 @@
         }
       }
     } catch (e) { /* ignorieren, Standard laden */ }
-    return { plan: clone(window.DEFAULT_PLAN), planVersion: window.DEFAULT_PLAN.version, logs: [], lastDayId: null, draft: null };
+    return { plan: clone(window.DEFAULT_PLAN), planVersion: window.DEFAULT_PLAN.version, logs: [], lastDayId: null, draft: null, settings: {} };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Speichern fehlgeschlagen (Speicher voll?)'); }
@@ -54,7 +54,7 @@
   function ensureDraft(dayId) {
     if (state.draft && state.draft.dayId === dayId) return state.draft;
     var day = dayById(dayId);
-    var d = { dayId: dayId, date: L.isoToday(), ex: {}, duration: '', kcal: '', note: '' };
+    var d = { dayId: dayId, date: L.isoToday(), ex: {}, duration: '', kcal: '', note: '', startedAt: null };
     day.exercises.forEach(function (e) {
       var r = []; for (var i = 0; i < e.sets; i++) r.push('');
       d.ex[e.id] = { weight: e.weight, reps: r };
@@ -87,6 +87,7 @@
     }).join('') + '</div>';
     h += '<h2>' + esc(day.emoji || '') + ' Tag ' + day.id + ' – ' + esc(day.name) + '</h2>';
     if (selDay === L.suggestDay(days, state.lastDayId)) h += '<div class="muted">Als Nächstes dran</div>';
+    h += topCards(draft);
     if (day.warmup && day.warmup.length) {
       h += '<div class="card"><h3>Aufwärmen</h3><ul class="warm">' + day.warmup.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul></div>';
     }
@@ -105,7 +106,7 @@
           return '<input type="number" inputmode="decimal" step="0.5" placeholder="Satz ' + (i + 1) + '" data-r="' + esc(e.id) + '" data-i="' + i + '" value="' + esc(r) + '">';
         }).join('') + '</div></div>';
     });
-    h += '<div class="card"><div class="grid2"><div><label class="f">Zeit (min)</label><input type="number" inputmode="numeric" data-meta="duration" value="' + esc(draft.duration) + '"></div>' +
+    h += '<div class="card"><div class="grid2"><div><label class="f">Zeit (min)</label><input type="number" inputmode="numeric" data-meta="duration" placeholder="auto" value="' + esc(draft.duration) + '"></div>' +
       '<div><label class="f">Kalorien</label><input type="number" inputmode="numeric" data-meta="kcal" value="' + esc(draft.kcal) + '"></div></div>' +
       '<label class="f">Bemerkungen</label><textarea rows="2" data-meta="note">' + esc(draft.note) + '</textarea></div>';
     h += '<button class="btn" id="finish">✅ Training speichern</button>';
@@ -179,7 +180,8 @@
       });
       h += '</div>';
     });
-    h += '<div class="card"><h3>Backup</h3><p class="muted">Sicherung aller Daten als Datei und zurückspielen.</p>' +
+    h += comebackCard();
+    h += '<div class="card"><h3>Backup</h3><p class="muted">Sicherung aller Daten als Datei und zurückspielen.' + backupStatus() + '</p>' +
       '<button class="btn sec" id="export">⬇️ Daten exportieren</button>' +
       '<button class="btn sec" id="import">⬆️ Daten importieren</button>' +
       '<input type="file" id="file" accept="application/json,.json" hidden>' +
@@ -199,6 +201,7 @@
       '<div class="grid3"><div><label class="f">Wdh. min</label><input id="f-min" type="number" inputmode="numeric" value="' + esc(e.repMin) + '"></div>' +
       '<div><label class="f">Wdh. max</label><input id="f-max" type="number" inputmode="numeric" value="' + esc(e.repMax) + '"></div>' +
       '<div><label class="f">Sätze</label><input id="f-sets" type="number" inputmode="numeric" value="' + esc(e.sets) + '"></div></div>' +
+      '<label class="f">Pause (Sekunden, leer = automatisch)</label><input id="f-rest" type="number" inputmode="numeric" value="' + esc(e.rest || '') + '">' +
       '<label class="f">Notiz</label><input id="f-note" type="text" value="' + esc(e.note) + '" style="text-align:left">' +
       '<label class="row" style="margin-top:10px"><input id="f-pulley" type="checkbox" style="width:auto"' + (e.pulley ? ' checked' : '') + '> Pulley-Übung</label>' +
       '<button class="btn" id="f-save">Speichern</button>' +
@@ -211,7 +214,7 @@
       var name = $('#f-name').value.trim();
       if (!name) { toast('Bitte einen Namen eingeben'); return; }
       var rmin = Math.max(1, Math.round(num('#f-min', 8))), rmax = Math.max(rmin, Math.round(num('#f-max', 10)));
-      var vals = { name: name, weight: Math.max(0, num('#f-weight', 0)), step: Math.max(0, num('#f-step', 0)), repMin: rmin, repMax: rmax, sets: Math.min(8, Math.max(1, Math.round(num('#f-sets', 3)))), note: $('#f-note').value.trim(), pulley: $('#f-pulley').checked };
+      var vals = { name: name, weight: Math.max(0, num('#f-weight', 0)), step: Math.max(0, num('#f-step', 0)), repMin: rmin, repMax: rmax, sets: Math.min(8, Math.max(1, Math.round(num('#f-sets', 3)))), note: $('#f-note').value.trim(), pulley: $('#f-pulley').checked, rest: Math.max(0, Math.round(num('#f-rest', 0))) };
       if (isNew) {
         var d = dayById(dayId);
         vals.id = 'ex-' + Date.now().toString(36);
@@ -252,6 +255,138 @@
     $('#how-close').onclick = function () { dlg.close(); };
   }
 
+  // ---------- Pausentimer, Stoppuhr, Hinweise ----------
+  var restEnd = 0, restTotal = 0, doneUntil = 0, audioCtx = null, persisted = null;
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtClock(ms) {
+    var s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+    return h ? (h + ':' + pad2(m) + ':' + pad2(x)) : (m + ':' + pad2(x));
+  }
+  function daysSince(iso) {
+    var p = iso.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]), n = new Date();
+    n = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+    return Math.round((n - d) / 86400000);
+  }
+  function unlockAudio() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = audioCtx || new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { }
+  }
+  function alarm() {
+    try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) { }
+    try {
+      if (!audioCtx) return;
+      [0, 0.35].forEach(function (off) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + off;
+        o.type = 'sine'; o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+        o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.3);
+      });
+    } catch (e) { }
+  }
+  function restStart(sec) {
+    unlockAudio();
+    restTotal = sec; restEnd = Date.now() + sec * 1000; doneUntil = 0; onTick();
+  }
+  function restStop() { restEnd = 0; doneUntil = 0; onTick(); }
+  function restAdjust(a) {
+    if (a === 'stop') return restStop();
+    var d = parseInt(a, 10) || 0;
+    if (!restEnd) { if (d > 0) restStart(d); return; }
+    restEnd += d * 1000; restTotal = Math.max(1, restTotal + d);
+    onTick();
+  }
+  function onTick() {
+    var now = Date.now(), clock = $('#clock');
+    if (clock && state.draft && state.draft.startedAt) clock.textContent = fmtClock(now - state.draft.startedAt);
+    var bar = $('#rest'); if (!bar) return;
+    if (restEnd && restEnd <= now) {
+      var late = now - restEnd; restEnd = 0;
+      if (late < 15000) { doneUntil = now + 8000; alarm(); }
+    }
+    if (restEnd) {
+      var left = restEnd - now;
+      bar.hidden = false; bar.classList.remove('done');
+      $('#rest-txt').innerHTML = '⏱ Pause <b>' + fmtClock(left) + '</b>';
+      $('#rest-prog').style.width = Math.min(100, Math.max(0, (1 - left / (restTotal * 1000)) * 100)) + '%';
+    } else if (doneUntil > now) {
+      bar.hidden = false; bar.classList.add('done');
+      $('#rest-txt').textContent = 'Weiter geht es – nächster Satz! 💪';
+    } else {
+      bar.hidden = true;
+    }
+  }
+  setInterval(onTick, 500);
+  document.addEventListener('visibilitychange', onTick);
+
+  function onSetEntered(input) {
+    if (input.value === '') return;
+    if (state.draft && !state.draft.startedAt) { state.draft.startedAt = Date.now(); save(); }
+    if (state.settings.timer === false) return;
+    restStart(L.defaultRest(findEx(input.dataset.r)));
+  }
+  function startWorkout() {
+    if (state.draft && !state.draft.startedAt) { state.draft.startedAt = Date.now(); save(); }
+    unlockAudio(); render(); toast('Stoppuhr läuft ⏱', 2000);
+  }
+
+  function topCards(draft) {
+    var h = '';
+    var lastDate = state.logs.reduce(function (m, l) { return l.date > m ? l.date : m; }, '');
+    if (lastDate) {
+      var gap = daysSince(lastDate);
+      if (gap >= 21 && !(state.weightBackup && state.weightBackup.date > lastDate)) {
+        h += '<div class="card"><b>👋 Willkommen zurück!</b><div class="muted">Dein letztes Training ist ' + gap + ' Tage her. Nach einer längeren Pause die Gewichte vorsichtig senken?</div><button class="btn sec" id="goto-plan">Zum Wiedereinstieg</button></div>';
+      }
+    }
+    var need = state.logs.length - (state.logsAtBackup || 0);
+    var bdays = state.lastBackup ? daysSince(state.lastBackup) : null;
+    var thr = !state.lastBackup ? 3 : (bdays >= 14 ? 1 : 4);
+    if (need >= thr) {
+      h += '<div class="card"><b>💾 Backup fällig</b><div class="muted">Letzte Sicherung: ' + (state.lastBackup ? fmtDate(state.lastBackup) + ' (vor ' + bdays + ' Tagen)' : 'noch nie') + '. Deine Daten liegen nur auf diesem Handy.</div><button class="btn sec" id="bk-now">⬇️ Jetzt sichern</button></div>';
+    }
+    h += '<div class="card"><div class="row spread">' +
+      (draft.startedAt ? '<span>⏱ Läuft: <b id="clock">' + fmtClock(Date.now() - draft.startedAt) + '</b></span>' : '<button class="small" id="start" style="padding:10px 14px;font-size:15px">▶ Training starten</button>') +
+      '<label class="row" style="gap:6px"><input type="checkbox" id="timer-on" style="width:auto"' + (state.settings.timer === false ? '' : ' checked') + '> Pausentimer</label></div></div>';
+    return h;
+  }
+
+  function backupStatus() {
+    var s = ' Letzte Sicherung: ' + (state.lastBackup ? fmtDate(state.lastBackup) : 'noch nie') + '.';
+    if (persisted === true) s += ' Speicher: dauerhaft geschützt ✅';
+    else if (persisted === false) s += ' Speicher: vom Browser löschbar – bitte regelmäßig sichern.';
+    return s;
+  }
+
+  function comebackCard() {
+    var b = state.weightBackup;
+    var h = '<div class="card"><h3>Wiedereinstieg nach Pause</h3><p class="muted">Senkt alle Plan-Gewichte um einen Prozentsatz (gerundet auf 0,5 kg). Übungen ohne Gewicht bleiben unverändert.</p>' +
+      '<label class="f">Reduzieren um</label><select id="cb-pct">' +
+      [10, 15, 20, 25, 30, 40, 50].map(function (p) { return '<option value="' + p + '"' + (p === 20 ? ' selected' : '') + '>' + p + ' %</option>'; }).join('') + '</select>' +
+      '<button class="btn sec" id="comeback">⬇️ Gewichte reduzieren</button>';
+    if (b) h += '<button class="btn dng" id="comeback-undo">↩︎ Rückgängig (−' + b.pct + ' % vom ' + fmtDate(b.date) + ')</button>';
+    return h + '</div>';
+  }
+  function comeback() {
+    var pct = parseInt($('#cb-pct').value, 10);
+    if (!confirm('Alle Gewichte im Plan um ' + pct + ' % reduzieren? Laufende Eingaben im Tab „Heute" werden geleert. Du kannst es rückgängig machen.')) return;
+    var res = L.reduceWeight(state.plan, pct);
+    if (!res.changed) { toast('Nichts zu reduzieren'); return; }
+    state.weightBackup = { date: L.isoToday(), pct: pct, weights: res.before };
+    state.draft = null; selDay = null; save(); render();
+    toast(res.changed + ' Gewichte um ' + pct + ' % gesenkt', 4500);
+  }
+  function comebackUndo() {
+    if (!state.weightBackup) return;
+    if (!confirm('Die Gewichte vor der Reduzierung wiederherstellen?')) return;
+    L.restoreWeights(state.plan, state.weightBackup.weights);
+    state.weightBackup = null; state.draft = null; selDay = null; save(); render();
+    toast('Gewichte wiederhergestellt');
+  }
+
   // ---------- Events ----------
   document.addEventListener('click', function (ev) {
     var t = ev.target;
@@ -267,6 +402,13 @@
       }
       selDay = id; save(); render(); return;
     }
+    if (t.id === 'start') return startWorkout();
+    if (t.id === 'bk-now') { doExport(); render(); toast('Backup gespeichert (Ordner Downloads)'); return; }
+    var rb = t.closest('[data-rest]');
+    if (rb) return restAdjust(rb.dataset.rest);
+    if (t.id === 'comeback') return comeback();
+    if (t.id === 'comeback-undo') return comebackUndo();
+    if (t.id === 'goto-plan') { tab = 'plan'; render(); window.scrollTo(0, 0); return; }
     if (t.id === 'finish') return finish();
     if (t.id === 'discard') {
       if (confirm('Alle Eingaben dieses Trainings leeren?')) { state.draft = null; save(); render(); }
@@ -311,6 +453,8 @@
   document.addEventListener('change', function (ev) {
     if (ev.target.id === 'exsel') { selEx = ev.target.value; render(); }
     if (ev.target.id === 'file') doImport(ev.target.files[0]);
+    if (ev.target.id === 'timer-on') { state.settings.timer = ev.target.checked; if (!ev.target.checked) restStop(); save(); }
+    if (ev.target.dataset && ev.target.dataset.r !== undefined) onSetEntered(ev.target);
   });
 
   // ---------- Training speichern ----------
@@ -325,7 +469,13 @@
       entries[e.id] = { name: e.name, weight: c.weight === '' ? e.weight : parseFloat(c.weight), reps: reps.map(function (r) { return isNaN(r) ? '' : r; }) };
     });
     if (!any) { toast('Noch keine Wiederholungen eingetragen'); return; }
-    var log = { id: Date.now(), date: d.date, dayId: d.dayId, exercises: entries, duration: d.duration, kcal: d.kcal, note: d.note };
+    var dur = d.duration;
+    if ((dur === '' || dur === undefined || dur === null) && d.startedAt) {
+      var mins = Math.round((Date.now() - d.startedAt) / 60000);
+      if (mins >= 1 && mins <= 240) dur = String(mins);
+    }
+    restStop();
+    var log = { id: Date.now(), date: d.date, dayId: d.dayId, exercises: entries, duration: dur, kcal: d.kcal, note: d.note };
     // Fortschritt nur für Übungen mit eingetragenen Sätzen
     var trained = { exercises: day.exercises.filter(function (e) { return entries[e.id] && entries[e.id].reps.some(function (r) { return r !== ''; }); }) };
     var changes = L.applyProgression(trained, entries);
@@ -341,6 +491,7 @@
 
   // ---------- Backup ----------
   function doExport() {
+    state.lastBackup = L.isoToday(); state.logsAtBackup = state.logs.length; save();
     var blob = new Blob([JSON.stringify({ app: 'wieder-fit', version: 1, exported: new Date().toISOString(), state: state }, null, 2)], { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'wieder-fit-backup-' + L.isoToday() + '.json';
@@ -356,7 +507,7 @@
         var s = j.state || j;
         if (!s.plan || !Array.isArray(s.plan.days) || !Array.isArray(s.logs)) throw new Error('Format');
         if (!confirm('Backup einspielen? Aktuelle Daten werden ersetzt.')) return;
-        state = s; state.draft = null; selDay = null; save(); render(); toast('Backup eingespielt');
+        state = s; state.settings = state.settings || {}; state.draft = null; selDay = null; save(); render(); toast('Backup eingespielt');
       } catch (e) { toast('Datei konnte nicht gelesen werden'); }
     };
     r.readAsText(file);
@@ -370,5 +521,8 @@
     });
     navigator.serviceWorker.register('sw.js').catch(function () { });
   }
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(function (p) { persisted = p; });
+  } catch (e) { }
   render();
 })();

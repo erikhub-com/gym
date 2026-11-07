@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 14;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 15;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -258,7 +258,7 @@
   }
 
   // ---------- Pausentimer, Stoppuhr, Hinweise ----------
-  var restEnd = 0, restTotal = 0, doneUntil = 0, audioCtx = null, persisted = null;
+  var restEnd = 0, restTotal = 0, doneUntil = 0, audioCtx = null, persisted = null, restT = null;
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function fmtClock(ms) {
     var s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
@@ -289,16 +289,34 @@
       });
     } catch (e) { }
   }
+  // Benachrichtigung am Pausenende (wird von Android auf die gekoppelte Uhr gespiegelt)
+  function notifyActive() { return 'Notification' in window && state.settings.notify === true && Notification.permission === 'granted'; }
+  function notifyRest() {
+    if (!notifyActive() || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.showNotification('Pause vorbei 💪', { body: 'Nächster Satz!', tag: 'rest', renotify: true, vibrate: [300, 150, 300, 150, 300], icon: 'icon-192.png', badge: 'icon-192.png' });
+    }).catch(function () { });
+  }
+  function clearRestNotice() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(function (reg) { return reg.getNotifications({ tag: 'rest' }); })
+      .then(function (list) { list.forEach(function (n) { n.close(); }); }).catch(function () { });
+  }
+  function schedRest() { clearTimeout(restT); if (restEnd) restT = setTimeout(onTick, Math.max(0, restEnd - Date.now()) + 30); }
+  function notifyRow() {
+    if (!('Notification' in window)) return '';
+    return '<div class="row" style="margin-top:8px"><label class="row" style="gap:6px"><input type="checkbox" id="notify-on" style="width:auto"' + (notifyActive() ? ' checked' : '') + '> 🔔 Hinweis am Pausenende (Handy &amp; Uhr)</label></div>';
+  }
   function restStart(sec) {
     unlockAudio();
-    restTotal = sec; restEnd = Date.now() + sec * 1000; doneUntil = 0; onTick();
+    restTotal = sec; restEnd = Date.now() + sec * 1000; doneUntil = 0; clearRestNotice(); schedRest(); onTick();
   }
-  function restStop() { restEnd = 0; doneUntil = 0; onTick(); }
+  function restStop() { restEnd = 0; doneUntil = 0; clearTimeout(restT); onTick(); }
   function restAdjust(a) {
     if (a === 'stop') return restStop();
     var d = parseInt(a, 10) || 0;
     if (!restEnd) { if (d > 0) restStart(d); return; }
-    restEnd += d * 1000; restTotal = Math.max(1, restTotal + d);
+    restEnd += d * 1000; restTotal = Math.max(1, restTotal + d); schedRest();
     onTick();
   }
   function onTick() {
@@ -307,6 +325,7 @@
     var bar = $('#rest'); if (!bar) return;
     if (restEnd && restEnd <= now) {
       var late = now - restEnd; restEnd = 0;
+      if (document.hidden && late < 180000) notifyRest();
       if (late < 15000) { doneUntil = now + 8000; alarm(); }
     }
     if (restEnd) {
@@ -352,7 +371,7 @@
     }
     h += '<div class="card"><div class="row spread">' +
       (draft.startedAt ? '<span>⏱ Läuft: <b id="clock">' + fmtClock(Date.now() - draft.startedAt) + '</b></span>' : '<button class="small" id="start" style="padding:10px 14px;font-size:15px">▶ Training starten</button>') +
-      '<label class="row" style="gap:6px"><input type="checkbox" id="timer-on" style="width:auto"' + (state.settings.timer === false ? '' : ' checked') + '> Pausentimer</label></div></div>';
+      '<label class="row" style="gap:6px"><input type="checkbox" id="timer-on" style="width:auto"' + (state.settings.timer === false ? '' : ' checked') + '> Pausentimer</label></div>' + notifyRow() + '</div>';
     return h;
   }
 
@@ -547,6 +566,17 @@
     if (ev.target.id === 'exsel') { selEx = ev.target.value; render(); }
     if (ev.target.id === 'file') doImport(ev.target.files[0]);
     if (ev.target.id === 'timer-on') { state.settings.timer = ev.target.checked; if (!ev.target.checked) restStop(); save(); }
+    if (ev.target.id === 'notify-on') {
+      var box = ev.target;
+      if (!box.checked) { state.settings.notify = false; save(); return; }
+      if (Notification.permission === 'granted') { state.settings.notify = true; save(); toast('Hinweis aktiviert 🔔'); return; }
+      if (Notification.permission === 'denied') { box.checked = false; toast('Benachrichtigungen sind blockiert – in Chrome unter Website-Einstellungen erlauben', 6000); return; }
+      Notification.requestPermission().then(function (p) {
+        state.settings.notify = p === 'granted'; box.checked = p === 'granted'; save();
+        toast(p === 'granted' ? 'Hinweis aktiviert 🔔' : 'Nicht erlaubt – Hinweis bleibt aus');
+      });
+      return;
+    }
     if (ev.target.dataset && ev.target.dataset.r !== undefined) onSetEntered(ev.target);
   });
 

@@ -65,6 +65,25 @@
     return changes;
   }
 
+  // Plan-Gewichte aus der letzten Einheit je Übung ableiten (Startwerte im Plan gelten nur bis zum ersten Training).
+  // Ausnahme: eine neuere bewusste Änderung (Wiedereinstieg, manuelle Bearbeitung) bleibt bis zum nächsten Training bestehen.
+  function syncPlanFromLogs(plan, logs, inv, backupDate) {
+    var changes = [];
+    plan.days.forEach(function (d) {
+      d.exercises.forEach(function (ex) {
+        var last = lastEntry(logs, ex.id);
+        if (!last) return;
+        var w = Number(last.weight);
+        if (!(w > 0)) return;
+        if (backupDate && backupDate > last.date) return;
+        if (ex.manualAt && ex.manualAt > last.date) return;
+        var next = nextWeight(w, ex.repMax, ex.step, last.reps, ex.equip ? function (wt, st) { return nextLadder(wt, st, ex.equip, inv); } : null);
+        if (next !== ex.weight) { changes.push({ id: ex.id, name: ex.name, from: ex.weight, to: next }); ex.weight = next; }
+      });
+    });
+    return changes;
+  }
+
   function isoToday() {
     var d = new Date();
     var m = String(d.getMonth() + 1).padStart(2, '0');
@@ -229,7 +248,7 @@
     return n;
   }
 
-  var api = { SIZES: SIZES, DEFAULT_INV: DEFAULT_INV, ladderWeights: ladderWeights, snapWeight: snapWeight, nextLadder: nextLadder, loadout: loadout, snapPlan: snapPlan, defaultRest: defaultRest, reduceWeight: reduceWeight, restoreWeights: restoreWeights, nextWeight: nextWeight, suggestDay: suggestDay, fmtReps: fmtReps, fmtKg: fmtKg, lastEntry: lastEntry, series: series, applyProgression: applyProgression, isoToday: isoToday, round: round };
+  var api = { SIZES: SIZES, DEFAULT_INV: DEFAULT_INV, ladderWeights: ladderWeights, snapWeight: snapWeight, nextLadder: nextLadder, loadout: loadout, snapPlan: snapPlan, defaultRest: defaultRest, reduceWeight: reduceWeight, restoreWeights: restoreWeights, nextWeight: nextWeight, suggestDay: suggestDay, fmtReps: fmtReps, fmtKg: fmtKg, lastEntry: lastEntry, series: series, applyProgression: applyProgression, syncPlanFromLogs: syncPlanFromLogs, isoToday: isoToday, round: round };
   root.TrainLogic = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);

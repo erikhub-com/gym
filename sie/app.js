@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'wieder-fit-v1';
-  var APP_VERSION = 11;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 12;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -30,6 +30,19 @@
       }
     } catch (e) { /* ignorieren, Standard laden */ }
     return { plan: clone(window.DEFAULT_PLAN), planVersion: window.DEFAULT_PLAN.version, logs: [], lastDayId: null, draft: null, settings: {} };
+  }
+  // Plan-Gewichte immer aus der letzten Einheit je Übung bauen; offene Entwürfe ohne Eingaben mitziehen.
+  function syncPlan() {
+    var old = {};
+    state.plan.days.forEach(function (d) { d.exercises.forEach(function (e) { old[e.id] = e.weight; }); });
+    var ch = L.syncPlanFromLogs(state.plan, state.logs, state.settings.inv || undefined, state.weightBackup && state.weightBackup.date);
+    if (state.draft) {
+      ch.forEach(function (c) {
+        var x = state.draft.ex && state.draft.ex[c.id];
+        if (x && !x.reps.some(function (r) { return r !== ''; }) && String(x.weight) === String(old[c.id])) x.weight = c.to;
+      });
+    }
+    return ch;
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Speichern fehlgeschlagen (Speicher voll?)'); }
@@ -222,6 +235,7 @@
         vals.id = 'ex-' + Date.now().toString(36);
         d.exercises.push(vals);
       } else {
+        if (vals.weight !== e.weight) vals.manualAt = L.isoToday();
         Object.assign(e, vals);
       }
       state.draft = null; // Entwurf neu aufbauen, damit Sätze/Gewichte stimmen
@@ -448,6 +462,7 @@
     if (!confirm('Alle Plan-Gewichte auf das nächste mit deinen Scheiben ladbare Gewicht legen? Laufende Eingaben im Tab „Heute" werden geleert.')) return;
     var ch = L.snapPlan(state.plan, inv());
     if (!ch.length) { toast('Alle Gewichte sind bereits ladbar'); return; }
+    ch.forEach(function (c) { var x = findEx(c.id); if (x) x.manualAt = L.isoToday(); });
     state.draft = null; selDay = null; save(); render();
     showSnapSummary(ch, 'Gewichte angepasst');
   }
@@ -546,7 +561,7 @@
     if (t.id === 'import') { $('#file').click(); return; }
     if (t.id === 'reset') {
       if (confirm('Plan auf den Standard zurücksetzen? Verlauf bleibt erhalten, eigene Gewichte im Plan gehen verloren.')) {
-        state.plan = clone(window.DEFAULT_PLAN); L.snapPlan(state.plan, inv()); state.planVersion = window.DEFAULT_PLAN.version; state.draft = null; selDay = null; save(); render();
+        state.plan = clone(window.DEFAULT_PLAN); L.snapPlan(state.plan, inv()); state.plan.days.forEach(function (d) { d.exercises.forEach(function (x) { x.manualAt = L.isoToday(); }); }); state.planVersion = window.DEFAULT_PLAN.version; state.draft = null; selDay = null; save(); render();
       }
     }
   });
@@ -630,7 +645,7 @@
         var s = j.state || j;
         if (!s.plan || !Array.isArray(s.plan.days) || !Array.isArray(s.logs)) throw new Error('Format');
         if (!confirm('Backup einspielen? Aktuelle Daten werden ersetzt.')) return;
-        state = s; state.settings = state.settings || {}; state.draft = null; selDay = null; save(); render(); toast('Backup eingespielt');
+        state = s; state.settings = state.settings || {}; syncPlan(); state.draft = null; selDay = null; save(); render(); toast('Backup eingespielt');
       } catch (e) { toast('Datei konnte nicht gelesen werden'); }
     };
     r.readAsText(file);
@@ -648,6 +663,7 @@
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(function (p) { persisted = p; });
   } catch (e) { }
   migrate();
+  syncPlan(); save();
   render();
   if (snapChanges) showSnapSummary(snapChanges, 'Gewichte an deine Scheiben angepasst');
 })();

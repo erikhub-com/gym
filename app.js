@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 16;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 17;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -110,7 +110,7 @@
       while (cur.reps.length < e.sets) cur.reps.push('');
       var lastTxt = last ? (lastLabel(last.date) + ': ' + L.fmtReps(last.reps) + (last.weight ? ' @ ' + L.fmtKg(last.weight) : '')) : 'Noch keine Einträge';
       h += '<div class="card' + (e.pulley ? ' pulley' : '') + '" data-ex="' + esc(e.id) + '">' +
-        '<div class="row spread"><h3>' + (idx + 1) + '. ' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') + '</h3><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></div>' +
+        '<div class="row spread"><h3>' + (idx + 1) + '. ' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') + '</h3><button class="chip" data-chip="' + esc(e.id) + '" data-rest="15" hidden aria-label="Pause, tippen für 15 Sekunden mehr"></button><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></div>' +
         '<div class="goal">Ziel: <b>' + e.repMin + '–' + e.repMax + ' × ' + e.sets + '</b> bei <b>' + L.fmtKg(e.weight) + '</b>' +
         (e.step ? ' <span class="muted">→ bei ' + e.repMax + '/' + e.repMax + '/' + e.repMax + ' ' + L.fmtKg(L.nextLadder(e.weight, e.step, e.equip, inv())) + '</span>' : '') + '</div>' +
         loadLine(e, cur.weight) + '<div class="last">↩ ' + esc(lastTxt) + '</div>' + (e.note ? '<div class="muted">💡 ' + esc(e.note) + '</div>' : '') +
@@ -272,7 +272,7 @@
   }
 
   // ---------- Pausentimer, Stoppuhr, Hinweise ----------
-  var restEnd = 0, restTotal = 0, doneUntil = 0, audioCtx = null, persisted = null, restT = null;
+  var restEnd = 0, restTotal = 0, doneUntil = 0, audioCtx = null, persisted = null, restT = null, restEx = null;
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function fmtClock(ms) {
     var s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
@@ -321,13 +321,15 @@
     if (!('Notification' in window)) return '';
     return '<div class="row" style="margin-top:8px"><label class="row" style="gap:6px"><input type="checkbox" id="notify-on" style="width:auto"' + (notifyActive() ? ' checked' : '') + '> 🔔 Hinweis am Pausenende (Handy &amp; Uhr)</label></div>';
   }
-  function restStart(sec) {
+  function restStart(sec, exId) {
+    restEx = exId || null;
     unlockAudio();
     restTotal = sec; restEnd = Date.now() + sec * 1000; doneUntil = 0; clearRestNotice(); schedRest(); onTick();
   }
   function restStop() { restEnd = 0; doneUntil = 0; clearTimeout(restT); onTick(); }
   function restAdjust(a) {
     if (a === 'stop') return restStop();
+    if (!restEnd && doneUntil > Date.now()) return restStop();
     var d = parseInt(a, 10) || 0;
     if (!restEnd) { if (d > 0) restStart(d); return; }
     restEnd += d * 1000; restTotal = Math.max(1, restTotal + d); schedRest();
@@ -342,8 +344,16 @@
       if (document.hidden && late < 180000) notifyRest();
       if (late < 15000) { doneUntil = now + 8000; alarm(); }
     }
+    var mode = restEnd ? 'run' : (doneUntil > now ? 'done' : 'none'), left = restEnd ? restEnd - now : 0;
+    var target = restEx ? document.querySelector('.chip[data-chip="' + restEx + '"]') : null;
+    document.querySelectorAll('.chip').forEach(function (c) { if (c !== target || mode === 'none') c.hidden = true; });
+    if (target && mode !== 'none') {
+      bar.hidden = true; target.hidden = false;
+      target.classList.toggle('done', mode === 'done');
+      target.textContent = mode === 'run' ? '⏱ ' + fmtClock(left) : 'Los! 💪';
+      return;
+    }
     if (restEnd) {
-      var left = restEnd - now;
       bar.hidden = false; bar.classList.remove('done');
       $('#rest-txt').innerHTML = '⏱ Pause <b>' + fmtClock(left) + '</b>';
       $('#rest-prog').style.width = Math.min(100, Math.max(0, (1 - left / (restTotal * 1000)) * 100)) + '%';
@@ -361,7 +371,7 @@
     if (input.value === '') return;
     if (state.draft && !state.draft.startedAt) { state.draft.startedAt = Date.now(); save(); }
     if (state.settings.timer === false) return;
-    restStart(L.defaultRest(findEx(input.dataset.r)));
+    restStart(L.defaultRest(findEx(input.dataset.r)), input.dataset.r);
   }
   function startWorkout() {
     if (state.draft && !state.draft.startedAt) { state.draft.startedAt = Date.now(); save(); }
@@ -434,7 +444,7 @@
   }
 
   // ---------- Scheiben, Stangen, Beladung ----------
-  var snapChanges = null;
+  var snapChanges = null, legMsg = false;
   function inv() { return state.settings.inv || undefined; }
   function fmtN(n) { return String(n).replace('.', ','); }
   var EQUIP_OPTS = [['free', 'Frei / Maschine / Körpergewicht (nicht angepasst)'], ['bar', 'Langhantel (symmetrisch geladen)'], ['db2', 'Zwei Kurzhanteln (Gewicht je Hand)'], ['db1', 'Eine Kurzhantel (Gewicht je Hand)'], ['plates', 'Lose Scheiben / Pulley-Stift']];
@@ -448,7 +458,32 @@
       state.settings.snapped = true;
       if (ch.length) { state.draft = null; selDay = null; snapChanges = ch; }
     }
+    if ((state.settings.planRev || 0) < 3) {
+      if (restructureLegCore()) legMsg = true;
+      state.settings.planRev = 3;
+    }
     save();
+  }
+  // Tag 3 = reiner Beintag, Tag 6 = reiner Core-Tag (bestehende Übungen behalten ihre Gewichte)
+  function restructureLegCore() {
+    var d3 = null, d6 = null;
+    state.plan.days.forEach(function (d) { if (d.id === 3) d3 = d; if (d.id === 6) d6 = d; });
+    if (!d3 || !d6 || d3.name !== 'Beine (hinten)' || d6.name !== 'Beine (vorn) + Core') return false;
+    var pool = {}, n3 = null, n6 = null;
+    d3.exercises.concat(d6.exercises).forEach(function (e) { pool[e.id] = e; });
+    window.DEFAULT_PLAN.days.forEach(function (d) { if (d.id === 3) n3 = d; if (d.id === 6) n6 = d; });
+    function build(def) {
+      return def.exercises.map(function (e) {
+        if (pool[e.id]) return pool[e.id];
+        var c = clone(e);
+        c.weight = L.snapWeight(c.weight, c.equip, inv(), 'nearest');
+        return c;
+      });
+    }
+    d3.name = n3.name; d3.emoji = n3.emoji; d3.warmup = n3.warmup.slice(); d3.exercises = build(n3);
+    d6.name = n6.name; d6.emoji = n6.emoji; d6.warmup = n6.warmup.slice(); d6.exercises = build(n6);
+    state.draft = null; selDay = null;
+    return true;
   }
   function showSnapSummary(ch, title) {
     var dlg = $('#dlg');
@@ -666,4 +701,5 @@
   syncPlan(); save();
   render();
   if (snapChanges) showSnapSummary(snapChanges, 'Gewichte an deine Scheiben angepasst');
+  if (legMsg) toast('Plan geändert: Tag 3 = Beine, Tag 6 = Core', 8000);
 })();

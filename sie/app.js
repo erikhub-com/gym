@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'wieder-fit-v1';
-  var APP_VERSION = 12;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 13;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -110,7 +110,7 @@
       while (cur.reps.length < e.sets) cur.reps.push('');
       var lastTxt = last ? (lastLabel(last.date) + ': ' + L.fmtReps(last.reps) + (last.weight ? ' @ ' + L.fmtKg(last.weight) : '')) : 'Noch keine Einträge';
       h += '<div class="card' + (e.pulley ? ' pulley' : '') + '" data-ex="' + esc(e.id) + '">' +
-        '<div class="row spread"><h3>' + (idx + 1) + '. ' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') + '</h3><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></div>' +
+        '<div class="row spread"><h3>' + (idx + 1) + '. ' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') + '</h3><button class="chip" data-chip="' + esc(e.id) + '" data-rest="15" hidden aria-label="Pause, tippen für 15 Sekunden mehr"></button><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></div>' +
         '<div class="goal">Ziel: <b>' + (e.repMin === e.repMax ? e.repMin : e.repMin + '–' + e.repMax) + ' × ' + e.sets + '</b> bei <b>' + L.fmtKg(e.weight) + '</b>' +
         (e.step ? ' <span class="muted">→ bei ' + e.repMax + '/' + e.repMax + '/' + e.repMax + ' ' + L.fmtKg(L.nextLadder(e.weight, e.step, e.equip, inv())) + '</span>' : '') + '</div>' +
         loadLine(e, cur.weight) + '<div class="last">↩ ' + esc(lastTxt) + '</div>' + (e.note ? '<div class="muted">💡 ' + esc(e.note) + '</div>' : '') +
@@ -272,7 +272,7 @@
   }
 
   // ---------- Pausentimer, Stoppuhr, Hinweise ----------
-  var restEnd = 0, restTotal = 0, doneUntil = 0, audioCtx = null, persisted = null, restT = null;
+  var restEnd = 0, restTotal = 0, doneUntil = 0, audioCtx = null, persisted = null, restT = null, restEx = null;
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function fmtClock(ms) {
     var s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
@@ -321,13 +321,15 @@
     if (!('Notification' in window)) return '';
     return '<div class="row" style="margin-top:8px"><label class="row" style="gap:6px"><input type="checkbox" id="notify-on" style="width:auto"' + (notifyActive() ? ' checked' : '') + '> 🔔 Hinweis am Pausenende (Handy &amp; Uhr)</label></div>';
   }
-  function restStart(sec) {
+  function restStart(sec, exId) {
+    restEx = exId || null;
     unlockAudio();
     restTotal = sec; restEnd = Date.now() + sec * 1000; doneUntil = 0; clearRestNotice(); schedRest(); onTick();
   }
   function restStop() { restEnd = 0; doneUntil = 0; clearTimeout(restT); onTick(); }
   function restAdjust(a) {
     if (a === 'stop') return restStop();
+    if (!restEnd && doneUntil > Date.now()) return restStop();
     var d = parseInt(a, 10) || 0;
     if (!restEnd) { if (d > 0) restStart(d); return; }
     restEnd += d * 1000; restTotal = Math.max(1, restTotal + d); schedRest();
@@ -342,8 +344,16 @@
       if (document.hidden && late < 180000) notifyRest();
       if (late < 15000) { doneUntil = now + 8000; alarm(); }
     }
+    var mode = restEnd ? 'run' : (doneUntil > now ? 'done' : 'none'), left = restEnd ? restEnd - now : 0;
+    var target = restEx ? document.querySelector('.chip[data-chip="' + restEx + '"]') : null;
+    document.querySelectorAll('.chip').forEach(function (c) { if (c !== target || mode === 'none') c.hidden = true; });
+    if (target && mode !== 'none') {
+      bar.hidden = true; target.hidden = false;
+      target.classList.toggle('done', mode === 'done');
+      target.textContent = mode === 'run' ? '⏱ ' + fmtClock(left) : 'Los! 💪';
+      return;
+    }
     if (restEnd) {
-      var left = restEnd - now;
       bar.hidden = false; bar.classList.remove('done');
       $('#rest-txt').innerHTML = '⏱ Pause <b>' + fmtClock(left) + '</b>';
       $('#rest-prog').style.width = Math.min(100, Math.max(0, (1 - left / (restTotal * 1000)) * 100)) + '%';
@@ -361,7 +371,7 @@
     if (input.value === '') return;
     if (state.draft && !state.draft.startedAt) { state.draft.startedAt = Date.now(); save(); }
     if (state.settings.timer === false) return;
-    restStart(L.defaultRest(findEx(input.dataset.r)));
+    restStart(L.defaultRest(findEx(input.dataset.r)), input.dataset.r);
   }
   function startWorkout() {
     if (state.draft && !state.draft.startedAt) { state.draft.startedAt = Date.now(); save(); }

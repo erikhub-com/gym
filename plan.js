@@ -10,7 +10,7 @@
     };
   }
   var DEFAULT_PLAN = {
-    version: 2,
+    version: 3,
     days: [
       {
         id: 1, name: 'Brust + Trizeps', emoji: '🦍',
@@ -37,11 +37,14 @@
         ]
       },
       {
-        id: 3, name: 'Beine (hinten)', emoji: '🐆',
+        id: 3, name: 'Beine', emoji: '🐆',
         warmup: ['Kniebeugen Körpergewicht 15', 'Hüftmobilisation 1–2 min', 'RDL: 20 kg × 10, 40 kg × 5, 55 kg × 3'],
         exercises: [
           ex('rdl', 'Romanian Deadlift', 70, 6, 8),
+          ex('sumo', 'Sumo Squat', 32.5, 6, 8),
           ex('bulgarian', 'Bulgarian Split Squat', 15, 6, 8),
+          ex('leg-ext', 'Leg Extension', 35, 8, 10),
+          ex('hip-ext-kabel', 'Hip Extension am Deckenzug (Pulley, Fußschlaufe)', 10, 10, 12, { pulley: true, note: 'neu, pro Seite; Standbein festhalten; Startgewicht anpassen' }),
           ex('back-ext', 'Back Extension', 15, 8, 10),
           ex('waden', 'Wadenheben (Hantel)', 20, 10, 15, { note: 'neu; Startgewicht anpassen' })
         ]
@@ -71,22 +74,21 @@
         ]
       },
       {
-        id: 6, name: 'Beine (vorn) + Core', emoji: '🐊',
-        warmup: ['Kniebeugen Körpergewicht 15', 'Hüftmobilisation 1–2 min'],
+        id: 6, name: 'Core', emoji: '🐊',
+        warmup: ['Katze-Kuh 10 Wiederholungen', 'Hüftmobilisation 1–2 min'],
         exercises: [
-          ex('sumo', 'Sumo Squat', 32.5, 6, 8),
-          ex('leg-ext', 'Leg Extension', 35, 8, 10),
-          ex('step-up', 'Step-Up', 17.5, 6, 8),
           ex('cable-crunch', 'Cable Crunch kniend (Pulley, Seil)', 20, 12, 15, { pulley: true, note: 'ersetzt Band; Startgewicht anpassen' }),
           ex('decline-crunch', 'Decline Crunch', 17.5, 8, 10),
           ex('russian-twist', 'Russian Twist', 20, 20, 30, { note: 'links + rechts einzeln zählen' }),
-          ex('dead-hang-leg', 'Dead Hang + Beinheben', 0, 12, 15, { sets: 2, step: 0, note: 'Körpergewicht' })
+          ex('dead-hang-leg', 'Dead Hang + Beinheben', 0, 12, 15, { sets: 2, step: 0, note: 'Körpergewicht' }),
+          ex('dead-bug', 'Dead Bugs', 0, 8, 10, { step: 0, note: 'pro Seite' }),
+          ex('plank', 'Plank (Sekunden)', 0, 30, 45, { step: 0, note: 'Zeit in Sekunden eintragen' })
         ]
       }
     ]
   };
   // Gerät je Übung für die Beladung: bar = Langhantel, db2 = zwei Kurzhanteln, db1 = eine Kurzhantel, plates = lose Scheiben/Pulley, free = keine Anpassung
-  var EQUIP = {'bankdruecken': 'bar', 'kh-flach': 'db2', 'fliegende-1': 'db2', 'bench-dips': 'plates', 'overhead-kh': 'db1', 'pushdown-seil': 'plates', 'schulterdruecken': 'db2', 'seitheben-2': 'db1', 'rear-delt-2': 'db2', 'barbell-curl': 'bar', 'preacher': 'bar', 'hammer-kh': 'db2', 'rdl': 'bar', 'bulgarian': 'db2', 'back-ext': 'plates', 'waden': 'db1', 'barbell-row': 'bar', 'latzug': 'plates', 'one-arm-row': 'db1', 'straight-arm': 'plates', 'face-pull-4': 'plates', 'schraegbank': 'db2', 'kh-flach-5': 'db2', 'fliegende': 'db2', 'seitheben-5': 'db1', 'incline-curl': 'db2', 'overhead-kh-5': 'db1', 'pushdown-5': 'plates', 'sumo': 'db1', 'step-up': 'db2', 'cable-crunch': 'plates', 'decline-crunch': 'plates', 'russian-twist': 'plates'};
+  var EQUIP = {'bankdruecken': 'bar', 'kh-flach': 'db2', 'fliegende-1': 'db2', 'bench-dips': 'plates', 'overhead-kh': 'db1', 'pushdown-seil': 'plates', 'schulterdruecken': 'db2', 'seitheben-2': 'db1', 'rear-delt-2': 'db2', 'barbell-curl': 'bar', 'preacher': 'bar', 'hammer-kh': 'db2', 'rdl': 'bar', 'bulgarian': 'db2', 'back-ext': 'plates', 'waden': 'db1', 'barbell-row': 'bar', 'latzug': 'plates', 'one-arm-row': 'db1', 'straight-arm': 'plates', 'face-pull-4': 'plates', 'schraegbank': 'db2', 'kh-flach-5': 'db2', 'fliegende': 'db2', 'seitheben-5': 'db1', 'incline-curl': 'db2', 'overhead-kh-5': 'db1', 'pushdown-5': 'plates', 'sumo': 'db1', 'step-up': 'db2', 'cable-crunch': 'plates', 'decline-crunch': 'plates', 'russian-twist': 'plates', 'hip-ext-kabel': 'plates'};
   DEFAULT_PLAN.days.forEach(function (d) { d.exercises.forEach(function (e) { e.equip = EQUIP[e.id] || 'free'; }); });
   root.DEFAULT_PLAN = DEFAULT_PLAN;
   if (typeof module !== 'undefined') module.exports = DEFAULT_PLAN;

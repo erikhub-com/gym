@@ -64,6 +64,13 @@
   add(['dead-hang-leg'],
     'An der Stange hängen, Schultern leicht aktiv.|Beine kontrolliert bis Hüfthöhe oder höher heben.|Ohne Schwung wieder absenken.');
 
+  add(['hip-ext-kabel'],
+    'Fußschlaufe am Knöchel, Seil am Deckenzug, mit den Händen an Bank oder Wand abstützen.|Bein nach hinten ziehen, Gesäß anspannen, Hüfte bleibt gerade, kein Hohlkreuz.|Langsam zurückkommen. Pro Seite die gleichen Sätze.');
+  add(['dead-bug'],
+    'Rückenlage, Arme zur Decke, Beine in 90° angehoben, unterer Rücken bleibt am Boden.|Gegenüberliegenden Arm und Bein langsam strecken, ohne dass der Rücken abhebt.|Zur Mitte zurück, Seite wechseln. Pro Seite zählen.');
+  add(['plank'],
+    'Unterarme unter den Schultern, Körper bildet eine Linie.|Gesäß und Bauch anspannen, Hüfte nicht durchhängen lassen.|Zeit in Sekunden eintragen, nur mit sauberer Form halten.');
+
   root.HOWTO = H;
   if (typeof module !== 'undefined') module.exports = H;
 })(typeof self !== 'undefined' ? self : globalThis);

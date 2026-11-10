@@ -6,7 +6,7 @@
     return {
       id: id, name: name, weight: weight, repMin: repMin, repMax: repMax,
       sets: o.sets || 2, step: o.step === undefined ? 2.5 : o.step,
-      pulley: !!o.pulley, note: o.note || ''
+      pulley: !!o.pulley, timed: !!o.timed, note: o.note || ''
     };
   }
   var RULE = 'Woche 1–2: nur 2 Sätze, 3–4 Wiederholungen im Tank lassen';
@@ -56,7 +56,7 @@
           ex('knee-raises', 'Hanging Knee Raises', 0, 8, 10, { step: 0 }),
           ex('dead-bug', 'Dead Bugs', 0, 8, 10, { step: 0, note: 'pro Seite' }),
           ex('reverse-crunch', 'Reverse Crunch', 0, 8, 10, { step: 0 }),
-          ex('plank', 'Plank (Sekunden)', 0, 25, 30, { step: 0, note: 'Zeit in Sekunden eintragen' }),
+          ex('plank', 'Plank (Sekunden)', 0, 25, 30, { step: 0, note: 'Countdown: leeres Satzfeld antippen', timed: true }),
           ex('clam-shell-4', 'Clam Shells', 0, 12, 15, { step: 0, note: 'pro Seite' }),
           ex('bear-taps', 'Bear Plank Shoulder Taps', 0, 8, 10, { step: 0, note: 'pro Seite' }),
           ex('side-steps-4', 'Banded Side Steps', 0, 12, 15, { step: 0, note: 'Extra-Fokus seitlicher Po; Schritte je Richtung' })

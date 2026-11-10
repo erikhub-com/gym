@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 17;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 18;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -108,15 +108,15 @@
       var last = L.lastEntry(state.logs, e.id);
       var cur = draft.ex[e.id] || (draft.ex[e.id] = { weight: e.weight, reps: [] });
       while (cur.reps.length < e.sets) cur.reps.push('');
-      var lastTxt = last ? (lastLabel(last.date) + ': ' + L.fmtReps(last.reps) + (last.weight ? ' @ ' + L.fmtKg(last.weight) : '')) : 'Noch keine Einträge';
+      var lastTxt = last ? (lastLabel(last.date) + ': ' + L.fmtReps(last.reps) + (e.timed ? ' s' : (last.weight ? ' @ ' + L.fmtKg(last.weight) : ''))) : 'Noch keine Einträge';
       h += '<div class="card' + (e.pulley ? ' pulley' : '') + '" data-ex="' + esc(e.id) + '">' +
         '<div class="row spread"><h3>' + (idx + 1) + '. ' + esc(e.name) + (e.pulley ? '<span class="badge">Pulley</span>' : '') + '</h3><button class="chip" data-chip="' + esc(e.id) + '" data-rest="15" hidden aria-label="Pause, tippen für 15 Sekunden mehr"></button><button class="small" data-how="' + esc(e.id) + '" aria-label="Ausführung zeigen">▶ Technik</button></div>' +
-        '<div class="goal">Ziel: <b>' + e.repMin + '–' + e.repMax + ' × ' + e.sets + '</b> bei <b>' + L.fmtKg(e.weight) + '</b>' +
+        (e.timed ? '<div class="goal">Ziel: <b>' + e.sets + ' × ' + (cur.hold || holdOf(e)) + ' s</b> halten <span class="muted">→ bei allen Sätzen geschafft: +5 s</span></div><div class="goal" hidden>' : '<div class="goal">') + 'Ziel: <b>' + e.repMin + '–' + e.repMax + ' × ' + e.sets + '</b> bei <b>' + L.fmtKg(e.weight) + '</b>' +
         (e.step ? ' <span class="muted">→ bei ' + e.repMax + '/' + e.repMax + '/' + e.repMax + ' ' + L.fmtKg(L.nextLadder(e.weight, e.step, e.equip, inv())) + '</span>' : '') + '</div>' +
         loadLine(e, cur.weight) + '<div class="last">↩ ' + esc(lastTxt) + '</div>' + (e.note ? '<div class="muted">💡 ' + esc(e.note) + '</div>' : '') +
-        '<label class="f">Gewicht (kg)</label><input class="wgt" type="number" inputmode="decimal" step="0.25" data-w="' + esc(e.id) + '" value="' + esc(cur.weight) + '">' +
+        (e.timed ? holdInput(e, cur) : '<label class="f">Gewicht (kg)</label><input class="wgt" type="number" inputmode="decimal" step="0.25" data-w="' + esc(e.id) + '" value="' + esc(cur.weight) + '">') +
         '<div class="sets">' + cur.reps.map(function (r, i) {
-          return '<input type="number" inputmode="decimal" step="0.5" placeholder="Satz ' + (i + 1) + '" data-r="' + esc(e.id) + '" data-i="' + i + '" value="' + esc(r) + '">';
+          return '<input type="number" inputmode="' + (e.timed && r === '' ? 'none' : 'decimal') + '" step="0.5" placeholder="' + (e.timed ? '▶ Satz ' : 'Satz ') + (i + 1) + '" data-r="' + esc(e.id) + '" data-i="' + i + '" value="' + esc(r) + '">';
         }).join('') + '</div></div>';
     });
     h += '<div class="card"><div class="grid2"><div><label class="f">Zeit (min)</label><input type="number" inputmode="numeric" data-meta="duration" placeholder="auto" value="' + esc(draft.duration) + '"></div>' +
@@ -219,6 +219,7 @@
       '<label class="f">Notiz</label><input id="f-note" type="text" value="' + esc(e.note) + '" style="text-align:left">' +
       '<label class="f">Gerät (für die Beladung)</label><select id="f-equip">' + EQUIP_OPTS.map(function (o) { return '<option value="' + o[0] + '"' + ((e.equip || 'free') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
       '<label class="row" style="margin-top:10px"><input id="f-pulley" type="checkbox" style="width:auto"' + (e.pulley ? ' checked' : '') + '> Pulley-Übung</label>' +
+      '<label class="row" style="margin-top:6px"><input id="f-timed" type="checkbox" style="width:auto"' + (e.timed ? ' checked' : '') + '> Zeitübung (Halten in Sekunden, mit Countdown)</label>' +
       '<button class="btn" id="f-save">Speichern</button>' +
       (isNew ? '' : '<div class="grid3"><button class="btn sec" id="f-up">↑</button><button class="btn sec" id="f-down">↓</button><button class="btn dng" id="f-del">Löschen</button></div>') +
       '<button class="btn sec" id="f-cancel">Abbrechen</button>';
@@ -229,7 +230,7 @@
       var name = $('#f-name').value.trim();
       if (!name) { toast('Bitte einen Namen eingeben'); return; }
       var rmin = Math.max(1, Math.round(num('#f-min', 8))), rmax = Math.max(rmin, Math.round(num('#f-max', 10)));
-      var vals = { name: name, weight: Math.max(0, num('#f-weight', 0)), step: Math.max(0, num('#f-step', 0)), repMin: rmin, repMax: rmax, sets: Math.min(8, Math.max(1, Math.round(num('#f-sets', 3)))), note: $('#f-note').value.trim(), pulley: $('#f-pulley').checked, rest: Math.max(0, Math.round(num('#f-rest', 0))), equip: $('#f-equip').value };
+      var vals = { name: name, weight: Math.max(0, num('#f-weight', 0)), step: Math.max(0, num('#f-step', 0)), repMin: rmin, repMax: rmax, sets: Math.min(8, Math.max(1, Math.round(num('#f-sets', 3)))), note: $('#f-note').value.trim(), pulley: $('#f-pulley').checked, rest: Math.max(0, Math.round(num('#f-rest', 0))), equip: $('#f-equip').value, timed: $('#f-timed').checked };
       if (isNew) {
         var d = dayById(dayId);
         vals.id = 'ex-' + Date.now().toString(36);
@@ -291,11 +292,12 @@
       if (audioCtx.state === 'suspended') audioCtx.resume();
     } catch (e) { }
   }
-  function alarm() {
-    try { if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); } catch (e) { }
+  function alarmOffsets(n) { var o = []; for (var k = 0; k < (n || 4); k++) o.push(k * 0.35); return o; }
+  function alarm(n) {
+    try { if (navigator.vibrate) navigator.vibrate(n ? 200 : [500, 200, 500, 200, 500]); } catch (e) { }
     try {
       if (!audioCtx) return;
-      [0, 0.35, 0.7, 1.05].forEach(function (off) {
+      alarmOffsets(n).forEach(function (off) {
         var o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + off;
         o.type = 'sine'; o.frequency.value = 880;
         g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
@@ -338,6 +340,7 @@
   function onTick() {
     var now = Date.now(), clock = $('#clock');
     if (clock && state.draft && state.draft.startedAt) clock.textContent = fmtClock(now - state.draft.startedAt);
+    if (holdEx) { holdTick(now); return; }
     var bar = $('#rest'); if (!bar) return;
     if (restEnd && restEnd <= now) {
       var late = now - restEnd; restEnd = 0;
@@ -443,6 +446,49 @@
     return last ? ' · ↩ ' + L.fmtReps(last.reps) : '';
   }
 
+  // ---------- Zeitübungen (Plank): Countdown pro Satz ----------
+  var holdEx = null, holdI = 0, holdSec = 0, holdStartAt = 0, holdEnd = 0, holdBeeped = false;
+  function holdOf(e) { return e.hold || e.repMin || 30; }
+  function holdInput(e, cur) {
+    return '<label class="f">Haltezeit pro Satz (Sek.) – leeres Satzfeld antippen startet den Countdown</label>' +
+      '<input class="wgt" type="number" inputmode="numeric" data-hold="' + esc(e.id) + '" value="' + esc(cur.hold || holdOf(e)) + '">';
+  }
+  function holdStart(exId, i) {
+    var e = findEx(exId), c = state.draft && state.draft.ex[exId];
+    if (!e || !c) return;
+    var sec = parseInt(c.hold, 10) || holdOf(e);
+    restStop(); unlockAudio();
+    holdEx = exId; holdI = i; holdSec = sec; holdStartAt = Date.now() + 5000; holdEnd = holdStartAt + sec * 1000; holdBeeped = false;
+    if (!state.draft.startedAt) { state.draft.startedAt = Date.now(); save(); }
+    onTick();
+  }
+  function holdFinish(early) {
+    var now = Date.now(), id = holdEx, i = holdI, secs = holdSec;
+    if (!id) return;
+    if (early) secs = Math.min(holdSec, Math.max(0, Math.round((now - holdStartAt) / 1000)));
+    holdEx = null;
+    if (early && secs < 1) { onTick(); return; }       // in der Vorbereitung abgebrochen
+    if (!early) alarm();
+    var input = document.querySelector('[data-r="' + id + '"][data-i="' + i + '"]');
+    if (state.draft && state.draft.ex[id]) { state.draft.ex[id].reps[i] = String(secs); save(); }
+    if (input) { input.value = secs; input.setAttribute('inputmode', 'decimal'); }
+    onTick();
+    if (state.settings.timer !== false) restStart(L.defaultRest(findEx(id)), id);
+  }
+  function holdTick(now) {
+    var hc = document.querySelector('.chip[data-chip="' + holdEx + '"]'), txt;
+    if (now < holdStartAt) txt = '⏳ ' + Math.ceil((holdStartAt - now) / 1000);
+    else {
+      if (!holdBeeped) { holdBeeped = true; alarm(1); }
+      if (now >= holdEnd) { holdFinish(false); return; }
+      txt = '🧘 ' + fmtClock(holdEnd - now);
+    }
+    document.querySelectorAll('.chip').forEach(function (c) { if (c !== hc) c.hidden = true; });
+    var bar = $('#rest');
+    if (hc) { if (bar) bar.hidden = true; hc.hidden = false; hc.classList.remove('done'); hc.textContent = txt; }
+    else if (bar) { bar.hidden = false; bar.classList.remove('done'); $('#rest-txt').textContent = txt; $('#rest-prog').style.width = '0'; }
+  }
+
   // ---------- Scheiben, Stangen, Beladung ----------
   var snapChanges = null, legMsg = false;
   function inv() { return state.settings.inv || undefined; }
@@ -450,9 +496,9 @@
   var EQUIP_OPTS = [['free', 'Frei / Maschine / Körpergewicht (nicht angepasst)'], ['bar', 'Langhantel (symmetrisch geladen)'], ['db2', 'Zwei Kurzhanteln (Gewicht je Hand)'], ['db1', 'Eine Kurzhantel (Gewicht je Hand)'], ['plates', 'Lose Scheiben / Pulley-Stift']];
 
   function migrate() {
-    var defs = {};
-    window.DEFAULT_PLAN.days.forEach(function (d) { d.exercises.forEach(function (e) { defs[e.id] = e.equip; }); });
-    state.plan.days.forEach(function (d) { d.exercises.forEach(function (e) { if (!e.equip) e.equip = defs[e.id] || 'free'; if (e.note && /^bei [\d\/]+ → /.test(e.note)) e.note = ''; }); });
+    var defs = {}, tdefs = {};
+    window.DEFAULT_PLAN.days.forEach(function (d) { d.exercises.forEach(function (e) { defs[e.id] = e.equip; if (e.timed) tdefs[e.id] = true; }); });
+    state.plan.days.forEach(function (d) { d.exercises.forEach(function (e) { if (!e.equip) e.equip = defs[e.id] || 'free'; if (e.timed === undefined && tdefs[e.id]) e.timed = true; if (e.note && /^bei [\d\/]+ → /.test(e.note)) e.note = ''; }); });
     if (!state.settings.snapped) {
       var ch = L.snapPlan(state.plan, inv());
       state.settings.snapped = true;
@@ -564,6 +610,11 @@
     }
     if (t.id === 'start') return startWorkout();
     if (t.id === 'bk-now') { doExport(); render(); toast('Backup gespeichert (Ordner Downloads)'); return; }
+    if (holdEx && t.closest('.chip')) return holdFinish(true);
+    if (t.dataset && t.dataset.r !== undefined && t.value === '') {
+      var te = findEx(t.dataset.r);
+      if (te && te.timed) { t.blur(); if (!holdEx) holdStart(t.dataset.r, parseInt(t.dataset.i, 10)); return; }
+    }
     var rb = t.closest('[data-rest]');
     if (rb) return restAdjust(rb.dataset.rest);
     if (t.id === 'inv-edit') return openInvDialog();
@@ -606,6 +657,8 @@
     if (!state.draft) return;
     if (t.dataset.r !== undefined) {
       state.draft.ex[t.dataset.r].reps[parseInt(t.dataset.i, 10)] = t.value.replace(',', '.'); save();
+    } else if (t.dataset.hold !== undefined) {
+      state.draft.ex[t.dataset.hold].hold = parseInt(t.value, 10) || 0; save();
     } else if (t.dataset.w !== undefined) {
       state.draft.ex[t.dataset.w].weight = t.value.replace(',', '.'); save(); updLoad(t.dataset.w);
     } else if (t.dataset.meta) {
@@ -652,6 +705,12 @@
     // Fortschritt nur für Übungen mit eingetragenen Sätzen
     var trained = { exercises: day.exercises.filter(function (e) { return entries[e.id] && entries[e.id].reps.some(function (r) { return r !== ''; }); }) };
     var changes = L.applyProgression(trained, entries, inv());
+    day.exercises.forEach(function (e) {
+      if (!e.timed || !d.ex[e.id]) return;
+      var h = parseInt(d.ex[e.id].hold, 10) || holdOf(e), rr = entries[e.id].reps.filter(function (r) { return r !== ''; });
+      e.hold = h;
+      if (rr.length >= e.sets && rr.every(function (r) { return r >= h; })) e.hold = h + 5;
+    });
     state.logs.push(log);
     state.lastDayId = d.dayId;
     state.draft = null;

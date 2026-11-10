@@ -6,7 +6,7 @@
     return {
       id: id, name: name, weight: weight, repMin: repMin, repMax: repMax,
       sets: o.sets || 3, step: o.step === undefined ? 2.5 : o.step,
-      pulley: !!o.pulley, note: o.note || ''
+      pulley: !!o.pulley, timed: !!o.timed, note: o.note || ''
     };
   }
   var DEFAULT_PLAN = {
@@ -82,7 +82,7 @@
           ex('russian-twist', 'Russian Twist', 20, 20, 30, { note: 'links + rechts einzeln zählen' }),
           ex('dead-hang-leg', 'Dead Hang + Beinheben', 0, 12, 15, { sets: 2, step: 0, note: 'Körpergewicht' }),
           ex('dead-bug', 'Dead Bugs', 0, 8, 10, { step: 0, note: 'pro Seite' }),
-          ex('plank', 'Plank (Sekunden)', 0, 30, 45, { step: 0, note: 'Zeit in Sekunden eintragen' })
+          ex('plank', 'Plank (Sekunden)', 0, 30, 45, { step: 0, note: 'Countdown: leeres Satzfeld antippen', timed: true })
         ]
       }
     ]

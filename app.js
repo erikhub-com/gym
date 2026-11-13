@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 18;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 19;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -84,6 +84,7 @@
     else if (tab === 'verlauf') v.innerHTML = viewVerlauf();
     else if (tab === 'fortschritt') v.innerHTML = viewFortschritt();
     else v.innerHTML = viewPlan();
+    if (tab === 'heute') v.querySelectorAll('input').forEach(function (i) { i.setAttribute('enterkeyhint', 'next'); });
     var n = state.logs.length;
     $('#sub').textContent = n + (n === 1 ? ' Training' : ' Trainings') + ' gespeichert · v' + APP_VERSION;
   }
@@ -652,6 +653,24 @@
     }
   });
 
+  // Enter = nächstes Feld (Satz → Satz → nächste Übung → Zeit → Kalorien)
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' || tab !== 'heute') return;
+    var t = ev.target;
+    if (!t || t.tagName !== 'INPUT') return;
+    ev.preventDefault();
+    var list = Array.prototype.slice.call(document.querySelectorAll('#view input[data-r]:not([inputmode="none"]), #view input[data-meta]'));
+    var next = null;
+    if (t.dataset.w !== undefined || t.dataset.hold !== undefined) {
+      var card = t.closest('[data-ex]');
+      next = card && card.querySelector('input[data-r]:not([inputmode="none"])');
+    } else {
+      var i = list.indexOf(t);
+      next = i >= 0 ? list[i + 1] : null;
+    }
+    if (next) { next.focus(); if (next.select) next.select(); }
+    else t.blur();
+  });
   document.addEventListener('input', function (ev) {
     var t = ev.target;
     if (!state.draft) return;

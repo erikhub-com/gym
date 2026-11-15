@@ -10,7 +10,7 @@
     };
   }
   var DEFAULT_PLAN = {
-    version: 3,
+    version: 4,
     days: [
       {
         id: 1, name: 'Brust + Trizeps', emoji: '🦍',
@@ -37,16 +37,15 @@
         ]
       },
       {
-        id: 3, name: 'Beine', emoji: '🐆',
-        warmup: ['Kniebeugen Körpergewicht 15', 'Hüftmobilisation 1–2 min', 'RDL: 20 kg × 10, 40 kg × 5, 55 kg × 3'],
+        id: 3, name: 'Core', emoji: '🐊',
+        warmup: ['Katze-Kuh 10 Wiederholungen', 'Hüftmobilisation 1–2 min'],
         exercises: [
-          ex('rdl', 'Romanian Deadlift', 70, 6, 8),
-          ex('sumo', 'Sumo Squat', 32.5, 6, 8),
-          ex('bulgarian', 'Bulgarian Split Squat', 15, 6, 8),
-          ex('leg-ext', 'Leg Extension', 35, 8, 10),
-          ex('hip-ext-kabel', 'Hip Extension am Deckenzug (Pulley, Fußschlaufe)', 10, 10, 12, { pulley: true, note: 'neu, pro Seite; Standbein festhalten; Startgewicht anpassen' }),
-          ex('back-ext', 'Back Extension', 15, 8, 10),
-          ex('waden', 'Wadenheben (Hantel)', 20, 10, 15, { note: 'neu; Startgewicht anpassen' })
+          ex('cable-crunch', 'Cable Crunch kniend (Pulley, Seil)', 20, 12, 15, { pulley: true, note: 'ersetzt Band; Startgewicht anpassen' }),
+          ex('decline-crunch', 'Decline Crunch', 17.5, 8, 10),
+          ex('russian-twist', 'Russian Twist', 20, 20, 30, { note: 'links + rechts einzeln zählen' }),
+          ex('dead-hang-leg', 'Dead Hang + Beinheben', 0, 12, 15, { sets: 2, step: 0, note: 'Körpergewicht' }),
+          ex('dead-bug', 'Dead Bugs', 0, 8, 10, { step: 0, note: 'pro Seite' }),
+          ex('plank', 'Plank (Sekunden)', 0, 30, 45, { step: 0, note: 'Countdown: leeres Satzfeld antippen', timed: true })
         ]
       },
       {
@@ -74,15 +73,16 @@
         ]
       },
       {
-        id: 6, name: 'Core', emoji: '🐊',
-        warmup: ['Katze-Kuh 10 Wiederholungen', 'Hüftmobilisation 1–2 min'],
+        id: 6, name: 'Beine', emoji: '🐆',
+        warmup: ['Kniebeugen Körpergewicht 15', 'Hüftmobilisation 1–2 min', 'RDL: 20 kg × 10, 40 kg × 5, 55 kg × 3'],
         exercises: [
-          ex('cable-crunch', 'Cable Crunch kniend (Pulley, Seil)', 20, 12, 15, { pulley: true, note: 'ersetzt Band; Startgewicht anpassen' }),
-          ex('decline-crunch', 'Decline Crunch', 17.5, 8, 10),
-          ex('russian-twist', 'Russian Twist', 20, 20, 30, { note: 'links + rechts einzeln zählen' }),
-          ex('dead-hang-leg', 'Dead Hang + Beinheben', 0, 12, 15, { sets: 2, step: 0, note: 'Körpergewicht' }),
-          ex('dead-bug', 'Dead Bugs', 0, 8, 10, { step: 0, note: 'pro Seite' }),
-          ex('plank', 'Plank (Sekunden)', 0, 30, 45, { step: 0, note: 'Countdown: leeres Satzfeld antippen', timed: true })
+          ex('rdl', 'Romanian Deadlift', 70, 6, 8),
+          ex('sumo', 'Sumo Squat', 32.5, 6, 8),
+          ex('bulgarian', 'Bulgarian Split Squat', 15, 6, 8),
+          ex('leg-ext', 'Leg Extension', 35, 8, 10),
+          ex('hip-ext-kabel', 'Hip Extension am Deckenzug (Pulley, Fußschlaufe)', 10, 10, 12, { pulley: true, note: 'neu, pro Seite; Standbein festhalten; Startgewicht anpassen' }),
+          ex('back-ext', 'Back Extension', 15, 8, 10),
+          ex('waden', 'Wadenheben (Hantel)', 20, 10, 15, { note: 'neu; Startgewicht anpassen' })
         ]
       }
     ]

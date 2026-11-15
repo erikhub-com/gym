@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 19;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 20;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -491,7 +491,7 @@
   }
 
   // ---------- Scheiben, Stangen, Beladung ----------
-  var snapChanges = null, legMsg = false;
+  var snapChanges = null, legMsg = '';
   function inv() { return state.settings.inv || undefined; }
   function fmtN(n) { return String(n).replace('.', ','); }
   var EQUIP_OPTS = [['free', 'Frei / Maschine / Körpergewicht (nicht angepasst)'], ['bar', 'Langhantel (symmetrisch geladen)'], ['db2', 'Zwei Kurzhanteln (Gewicht je Hand)'], ['db1', 'Eine Kurzhantel (Gewicht je Hand)'], ['plates', 'Lose Scheiben / Pulley-Stift']];
@@ -506,10 +506,26 @@
       if (ch.length) { state.draft = null; selDay = null; snapChanges = ch; }
     }
     if ((state.settings.planRev || 0) < 3) {
-      if (restructureLegCore()) legMsg = true;
+      if (restructureLegCore()) legMsg = 'Plan geändert: Tag 3 = Core, Tag 6 = Beine';
       state.settings.planRev = 3;
     }
+    if ((state.settings.planRev || 0) < 4) {
+      if (swapLegCore()) legMsg = 'Plan geändert: Tag 3 = Core, Tag 6 = Beine';
+      state.settings.planRev = 4;
+    }
     save();
+  }
+  // Beintag und Core-Tag tauschen (Tag 3 = Core, Tag 6 = Beine); Verlauf wird mitgetauscht
+  function swapLegCore() {
+    var d3 = null, d6 = null;
+    state.plan.days.forEach(function (d) { if (d.id === 3) d3 = d; if (d.id === 6) d6 = d; });
+    if (!d3 || !d6 || d3.name !== 'Beine' || d6.name !== 'Core') return false;
+    d3.id = 6; d6.id = 3;
+    state.plan.days.sort(function (a, b) { return a.id - b.id; });
+    state.logs.forEach(function (l) { if (l.dayId === 3) l.dayId = 6; else if (l.dayId === 6) l.dayId = 3; });
+    if (state.lastDayId === 3) state.lastDayId = 6; else if (state.lastDayId === 6) state.lastDayId = 3;
+    state.draft = null; selDay = null;
+    return true;
   }
   // Tag 3 = reiner Beintag, Tag 6 = reiner Core-Tag (bestehende Übungen behalten ihre Gewichte)
   function restructureLegCore() {
@@ -518,7 +534,7 @@
     if (!d3 || !d6 || d3.name !== 'Beine (hinten)' || d6.name !== 'Beine (vorn) + Core') return false;
     var pool = {}, n3 = null, n6 = null;
     d3.exercises.concat(d6.exercises).forEach(function (e) { pool[e.id] = e; });
-    window.DEFAULT_PLAN.days.forEach(function (d) { if (d.id === 3) n3 = d; if (d.id === 6) n6 = d; });
+    window.DEFAULT_PLAN.days.forEach(function (d) { if (d.name === 'Beine') n3 = d; if (d.name === 'Core') n6 = d; });
     function build(def) {
       return def.exercises.map(function (e) {
         if (pool[e.id]) return pool[e.id];
@@ -779,5 +795,5 @@
   syncPlan(); save();
   render();
   if (snapChanges) showSnapSummary(snapChanges, 'Gewichte an deine Scheiben angepasst');
-  if (legMsg) toast('Plan geändert: Tag 3 = Beine, Tag 6 = Core', 8000);
+  if (legMsg) toast(legMsg, 8000);
 })();

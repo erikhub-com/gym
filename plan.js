@@ -10,7 +10,7 @@
     };
   }
   var DEFAULT_PLAN = {
-    version: 4,
+    version: 5,
     days: [
       {
         id: 1, name: 'Brust + Trizeps', emoji: '🦍',
@@ -68,7 +68,7 @@
           ex('fliegende', 'Fliegende KH', 15, 8, 10),
           ex('seitheben-5', 'Seitheben einarmig (2. Frequenz)', 10, 8, 10, { note: 'leichter als Tag 2; Startgewicht anpassen' }),
           ex('incline-curl', 'Incline Curl (~50° Bank)', 12.5, 8, 10),
-          ex('overhead-kh-5', 'Overhead Trizeps Extension KH', 22.5, 8, 10),
+          ex('skullcrusher-5', 'Skullcrusher (SZ-Stange)', 20, 8, 10, { note: 'liegend auf der Bank, Ellbogen zeigen zur Decke' }),
           ex('pushdown-5', 'Seilzug-Pushdown (Pulley)', 20, 8, 10, { pulley: true, note: 'ersetzt Band-Pushdown; Startgewicht anpassen' })
         ]
       },
@@ -88,7 +88,7 @@
     ]
   };
   // Gerät je Übung für die Beladung: bar = Langhantel, db2 = zwei Kurzhanteln, db1 = eine Kurzhantel, plates = lose Scheiben/Pulley, free = keine Anpassung
-  var EQUIP = {'bankdruecken': 'bar', 'kh-flach': 'db2', 'fliegende-1': 'db2', 'bench-dips': 'plates', 'overhead-kh': 'db1', 'pushdown-seil': 'plates', 'schulterdruecken': 'db2', 'seitheben-2': 'db1', 'rear-delt-2': 'db2', 'barbell-curl': 'bar', 'preacher': 'bar', 'hammer-kh': 'db2', 'rdl': 'bar', 'bulgarian': 'db2', 'back-ext': 'plates', 'waden': 'db1', 'barbell-row': 'bar', 'latzug': 'plates', 'one-arm-row': 'db1', 'straight-arm': 'plates', 'face-pull-4': 'plates', 'schraegbank': 'db2', 'kh-flach-5': 'db2', 'fliegende': 'db2', 'seitheben-5': 'db1', 'incline-curl': 'db2', 'overhead-kh-5': 'db1', 'pushdown-5': 'plates', 'sumo': 'db1', 'step-up': 'db2', 'cable-crunch': 'plates', 'decline-crunch': 'plates', 'russian-twist': 'plates', 'hip-ext-kabel': 'plates'};
+  var EQUIP = {'bankdruecken': 'bar', 'kh-flach': 'db2', 'fliegende-1': 'db2', 'bench-dips': 'plates', 'overhead-kh': 'db1', 'pushdown-seil': 'plates', 'schulterdruecken': 'db2', 'seitheben-2': 'db1', 'rear-delt-2': 'db2', 'barbell-curl': 'bar', 'preacher': 'bar', 'hammer-kh': 'db2', 'rdl': 'bar', 'bulgarian': 'db2', 'back-ext': 'plates', 'waden': 'db1', 'barbell-row': 'bar', 'latzug': 'plates', 'one-arm-row': 'db1', 'straight-arm': 'plates', 'face-pull-4': 'plates', 'schraegbank': 'db2', 'kh-flach-5': 'db2', 'fliegende': 'db2', 'seitheben-5': 'db1', 'incline-curl': 'db2', 'skullcrusher-5': 'bar', 'pushdown-5': 'plates', 'sumo': 'db1', 'step-up': 'db2', 'cable-crunch': 'plates', 'decline-crunch': 'plates', 'russian-twist': 'plates', 'hip-ext-kabel': 'plates'};
   DEFAULT_PLAN.days.forEach(function (d) { d.exercises.forEach(function (e) { e.equip = EQUIP[e.id] || 'free'; }); });
   root.DEFAULT_PLAN = DEFAULT_PLAN;
   if (typeof module !== 'undefined') module.exports = DEFAULT_PLAN;

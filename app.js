@@ -2,7 +2,7 @@
   'use strict';
   var L = window.TrainLogic;
   var KEY = 'dschungel-gym-v1';
-  var APP_VERSION = 20;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
+  var APP_VERSION = 21;     // zur Kontrolle oben rechts sichtbar; mit sw.js CACHE hochzählen
   var state = load();
   var tab = 'heute';
   var selDay = null;       // im Heute-Tab gewählter Tag
@@ -513,7 +513,26 @@
       if (swapLegCore()) legMsg = 'Plan geändert: Tag 3 = Core, Tag 6 = Beine';
       state.settings.planRev = 4;
     }
+    if ((state.settings.planRev || 0) < 5) {
+      if (swapOverheadForSkull()) legMsg = 'Tag 5, Übung 6: jetzt Skullcrusher (SZ-Stange) mit 20 kg';
+      state.settings.planRev = 5;
+    }
     save();
+  }
+  // Tag 5, Übung 6: Overhead Trizeps Extension durch Skullcrusher (SZ-Stange, 20 kg) ersetzen
+  function swapOverheadForSkull() {
+    var def = null;
+    window.DEFAULT_PLAN.days.forEach(function (d) { d.exercises.forEach(function (e) { if (e.id === 'skullcrusher-5') def = e; }); });
+    var done = false;
+    if (!def) return false;
+    state.plan.days.forEach(function (d) {
+      if (d.id !== 5) return;
+      d.exercises.forEach(function (e, i) {
+        if (e.id === 'overhead-kh-5') { d.exercises[i] = clone(def); done = true; }
+      });
+    });
+    if (done) { state.draft = null; selDay = null; }
+    return done;
   }
   // Beintag und Core-Tag tauschen (Tag 3 = Core, Tag 6 = Beine); Verlauf wird mitgetauscht
   function swapLegCore() {

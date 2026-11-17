@@ -13,6 +13,8 @@
     'Ellbogen leicht gebeugt und den Winkel während der ganzen Bewegung halten.|Arme im weiten Bogen öffnen, bis die Brust gedehnt wird, nicht tiefer.|Hanteln im Bogen wieder zusammenführen. Gewicht moderat, Schultern schonen.');
   add(['bench-dips'],
     'Hände auf der Bank hinter dir, Beine gestreckt, Zusatzgewicht auf den Oberschenkeln.|Ellbogen nach hinten beugen, bis etwa 90°.|Schultern dabei nicht nach vorn kippen lassen, kontrolliert hochdrücken.');
+  add(['skullcrusher-5'],
+    'Auf der Bank liegen, SZ-Stange mit engem Griff über der Brust halten, Arme senkrecht.|Nur die Unterarme beugen: Stange kontrolliert Richtung Stirn oder knapp dahinter absenken, Ellbogen bleiben oben und eng.|Mit dem Trizeps wieder strecken, ohne die Ellbogen nach außen wandern zu lassen.');
   add(['overhead-kh', 'overhead-kh-5'],
     'Hantel mit beiden Händen über dem Kopf halten, Ellbogen zeigen nach oben und bleiben eng.|Hinter dem Kopf absenken, bis der Trizeps gedehnt wird.|Ohne Hohlkreuz wieder strecken.');
   add(['pushdown-seil', 'pushdown-5'],
